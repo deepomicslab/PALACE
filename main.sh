@@ -112,7 +112,7 @@ for i in `ls $work_dir/second_match/*.second`; do
   	$bin_m/matching -g $fullname -r ${second}_result.txt -c ${second}_cycle.txt -i 10 -v 1 --model 1;
   	python $make_fa_from_path $edge_fa ${second}_result.txt ${second}_unfiltered.fasta 1;
   	blastn -query ${second}_unfiltered.fasta -out ${second}_ass_index.blast -db $work_dir/${prefix}_ref_index -outfmt "6 qaccver saccver pident qlen slen length mismatch gapopen qstart qend sstart send evalue bitscore" ;
-  	python $plost ${second}_ass_index.blast $cycle_txt ${second}_tmp.txt 0 0.7> ${second}_final.txt
+  	python $plost ${second}_ass_index.blast $cycle_txt ${second}_tmp.txt 0 0.7 ${second}> ${second}_final.txt
 done
 
 #python $filter_cycle $work_dir/cycle_res.txt > $work_dir/filtered_cycle_res.txt
@@ -134,14 +134,14 @@ echo "second match done\n"
 python $make_final_fa $assembly_fasta $work_dir/${prefix}_final.txt $work_dir/${prefix}_final.fa $prefix
 
 ## delete the unused files
-mkdir $work_dir/${prefix}_final_result/
-mv $work_dir/${prefix}_final.txt $work_dir/${prefix}_final_result/
-mv $work_dir/${prefix}_final.fa $work_dir/${prefix}_final_result/
-mv $work_dir/filtered_cycle_res.txt $work_dir/${prefix}_final_result/
-mv $work_dir/need_second_match.txt $work_dir/${prefix}_final_result/
-mv $work_dir/${prefix}_assem/contigs.fasta $work_dir/${prefix}_final_result/
+# mkdir $work_dir/${prefix}_final_result/
+# mv $work_dir/${prefix}_final.txt $work_dir/${prefix}_final_result/
+# mv $work_dir/${prefix}_final.fa $work_dir/${prefix}_final_result/
+# mv $work_dir/filtered_cycle_res.txt $work_dir/${prefix}_final_result/
+# mv $work_dir/need_second_match.txt $work_dir/${prefix}_final_result/
+# mv $work_dir/${prefix}_assem/contigs.fasta $work_dir/${prefix}_final_result/
 
-mv $work_dir/${prefix}_final_result /home/ruohawang2/12.Phage_assem/meta_result/ERP003612/
-rm -r $work_dir
+# mv $work_dir/${prefix}_final_result /home/ruohawang2/12.Phage_assem/meta_result/ERP003612/
+# rm -r $work_dir
 
 
