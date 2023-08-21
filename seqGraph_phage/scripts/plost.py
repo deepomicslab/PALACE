@@ -56,7 +56,7 @@ for line in f_in.readlines():
     t = line.strip().split("\t")
     #if "EDGE_28981966_length_1824_cov_10" in prev_seg:
     #    print(prev_len,"tdtd")
-    if (t[1] not in single_ref):
+    if (single_ref != "" and  t[1] not in single_ref):
         continue
     if (prev_seg != t[0] and prev_seg != "") or (prev_ref != t[1] and prev_ref != ""):
     #    if "EDGE_28981966_length_1824_cov_10" in prev_seg:
@@ -87,7 +87,7 @@ for fline in open(sys.argv[1]).readlines():
     count = contig_num - 1
     contig = ""
     line = fline.strip("\n").split("\t")
-    if line[1] not in single_ref:
+    if single_ref != "" and line[1] not in single_ref:
         continue
     if line[0] not in blast_segs:
         continue
