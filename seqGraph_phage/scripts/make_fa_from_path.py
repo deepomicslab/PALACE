@@ -17,6 +17,7 @@ def rev_comp(s):
 
 
 if __name__ == "__main__":
+    print("make_fa_from_path.py running")
     fa = pysam.FastaFile(sys.argv[1])
     res = open(sys.argv[3], "w")
     model = sys.argv[4]

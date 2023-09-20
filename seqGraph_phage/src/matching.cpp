@@ -219,7 +219,12 @@ void matching::bfs(int u, float ex[], float ey[], bool visity[], int pre[], std:
     std::fill_n(slack, N+1, INF);
     matched[y] = u;
 
+    int k = 0;
     while (true){
+	k++;
+	if (k == 1000){
+		break;
+	}
         x = matched[y], d = INF, visity[y] = true;
         visity[seqGraph::conjugateIdx(x)] = true;
 //        visity[x] = true;

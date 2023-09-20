@@ -17,6 +17,11 @@ prev_len = 0
 prev_ref = ""
 res_count = set()
 in_faout= []
+fai_len = {}
+with open(fain+".fai", 'r') as f:
+    for line in f:
+        fields = line.strip().split('\t')
+        fai_len[fields[0]] = int(fields[1])
 def contains_gen(line,genes_seg):
     strip_line = line.strip().replace("+","").replace("-","")
     line_arr = strip_line.split("\t")
@@ -24,14 +29,16 @@ def contains_gen(line,genes_seg):
         if item in genes_seg:
             return True
     return False
+def get_seg_len(seg):
+    return fai_len[seg.replace("+","").replace("-","").replace("ref","").replace("self","").replace("gene","").replace("gene","").replace("score","").replace("cycle","")]
 def line_len(line):
     result_len = 0
     vs = re.split(r'[+-]',line)
     for v in vs:
         if v == "":
             continue
-        split_v = v.split("_")
-        result_len = result_len + int(split_v[3])
+        #split_v = v.split("_")
+        result_len = result_len + get_seg_len(v)
     return result_len
 # cycle_gene_self  = open("cycle_gene_self.txt", "w")
 #for line in blastin.readlines():
@@ -53,7 +60,7 @@ def line_len(line):
 for line in blastin.readlines():
     t = line.strip().split("\t")
     if (prev_seg != t[0] and prev_seg != "") or (prev_ref != t[1] and prev_ref != ""):
-        elen = prev_seg.split("_")[3]
+        elen = fai_len[prev_seg]
         #if float(prev_len) / float(elen) > blast_ratio or prev_len > 2000:
         if float(prev_len) / float(elen) > blast_ratio:
             blast_segs.add(prev_seg)
@@ -66,7 +73,7 @@ for line in blastin.readlines():
         prev_seg = t[0]
         prev_ref = t[1]
 if prev_seg != "":
-    elen = prev_seg.split("_")[3]
+    elen = fai_len[prev_seg]
     #if float(prev_len) / float(elen) > blast_ratio or prev_len > 2000:
     if float(prev_len) / float(elen) > blast_ratio:
         blast_segs.add(t[0])
@@ -158,7 +165,7 @@ for idx, line in enumerate(orderin.readlines()):
         # if cycle_tag:
         #     print(">cycle-gene" + "".join(tmp))
     for t in tmp:
-        elen = int(t.split("_")[3])
+        elen = fai_len[t.replace("+","").replace("-","")]
         all_len = all_len + elen
         if t[0:-1] in blast_segs:
             blast_len = blast_len + elen

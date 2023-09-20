@@ -1,0 +1,25 @@
+#input
+fastq1=/home/ruohawang2/12.Phage_assem/phage/s1_5_1_out/s1_5_1_out_1.fastq.gz
+##can be empty if not ngs
+fastq2=/home/ruohawang2/12.Phage_assem/phage/s1_5_1_out/s1_5_1_out_2.fastq.gz
+##phage reference database, https://github.com/deepomicslab/PALACE.git
+phagedb=/home/ruohawang2/12.Phage_assem/pipeline/genome_db/checkv_reps.fna
+##phage protein database, https://github.com/deepomicslab/PALACE.git
+protein_db=/home/ruohawang2/12.Phage_assem/phage_protein_anno/SCAPP/scapp/protein_db
+
+#output
+##output directory
+out_dir=/home/ruohawang2/12.Phage_assem/phage/s1_5_1_out/s1_5_1_seq_bk
+##prefix for temporary files, sample name
+prefix=s1_5_1
+##threads
+threads=24
+
+#software
+PYTHON=python
+BWA=bwa
+SAMTOOLS=samtools
+FASTP=fastp
+SPADES=spades.py
+NCBI_BIN=/home/ruohawang2/miniconda3/envs/pytorch_gpu/bin
+PALACE=/home/ruohawang2/12.Phage_assem/phage/PALACE

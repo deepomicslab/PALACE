@@ -420,13 +420,16 @@ int main(int argc, char *argv[]) {
 //                        not_print_tag = false;
 //                    }
                     if (MODEL == 0) {
-                        std::vector<std::string> tokens;
-                        tokenize(m->idx2StrDir(v).substr(0, m->idx2StrDir(v).length()-1), tokens, "_");
-                        int length = std::stoi(tokens[3]);
-                        total_length+=length;
+                        //std::vector<std::string> tokens;
+			//tokenize(m->idx2StrDir(v).substr(0, m->idx2StrDir(v).length()-1), tokens, "_");
+                        //int length = std::stoi(tokens[3]);
+                        //total_length+=length;
                     }
                 }
-                if(MODEL ==0 and (total_length<MIN_L|| not_print_tag)){
+                //if(MODEL ==0 and (total_length<MIN_L|| not_print_tag)){
+                //    continue;
+                //}
+                if(MODEL ==0 and (not_print_tag)){
                     continue;
                 }
 //                bool self_loop_flag = false;
@@ -517,10 +520,10 @@ int main(int argc, char *argv[]) {
             std::string current_path;
             for(const auto& v: *item.second) {
                 if (MODEL == 0) {
-                    std::vector<std::string> tokens;
-                    tokenize(m->idx2StrDir(v).substr(0, m->idx2StrDir(v).length()-1), tokens, "_");
-                    int length = std::stoi(tokens[3]);
-                    total_length+=length;
+                    //std::vector<std::string> tokens;
+                    //tokenize(m->idx2StrDir(v).substr(0, m->idx2StrDir(v).length()-1), tokens, "_");
+                    //int length = std::stoi(tokens[3]);
+                    //total_length+=length;
                 }
                 if (v == -1) {
                     resultFile<<'c';
@@ -530,14 +533,14 @@ int main(int argc, char *argv[]) {
                 current_path.append(m->idx2StrDir(v)).append("\t");
             }
             if (MODEL == 0) {
-                if (total_length>500){
-                    if (std::find(all_paths.begin(), all_paths.end(), current_path) != all_paths.end())
-                        continue;
+                //if (total_length>500){
+                //    if (std::find(all_paths.begin(), all_paths.end(), current_path) != all_paths.end())
+                //        continue;
                     all_paths.push_back(current_path);
                     resultFile<<current_path<<std::endl;
-                }else{
-                    std::cout<<"not pass for: "<<current_path<<std::endl;
-                }
+                //}else{
+                //    std::cout<<"not pass for: "<<current_path<<std::endl;
+                //}
             } else {
                 if (std::find(all_paths.begin(), all_paths.end(), current_path) != all_paths.end())
                     continue;
@@ -552,17 +555,17 @@ int main(int argc, char *argv[]) {
     for(auto& self_loop: visited_self_loop){
         if (std::find(to_be_remove_sl.begin(), to_be_remove_sl.end(), self_loop)==to_be_remove_sl.end()){
             if (MODEL == 0) {
-                std::vector<std::string> tokens;
-                tokenize(self_loop, tokens, "_");
-                std::cout<<self_loop<<std::endl;
-                int length = std::stoi(tokens[3]);
-                if (length>1000){
-                    std::cout<<"pass for: "<<self_loop<<std::endl;
-                    cyclePathsFile<< "self loop: "<<std::endl;
-                    cyclePathsFile<<self_loop+"+"<<std::endl;
-                }else{
-                    std::cout<<"not pass for: "<<self_loop<<std::endl;
-                }
+                //std::vector<std::string> tokens;
+                //tokenize(self_loop, tokens, "_");
+                //std::cout<<self_loop<<std::endl;
+                //int length = std::stoi(tokens[3]);
+                //if (length>1000){
+                //   std::cout<<"pass for: "<<self_loop<<std::endl;
+                cyclePathsFile<< "self loop: "<<std::endl;
+                cyclePathsFile<<self_loop+"+"<<std::endl;
+                //}else{
+                //    std::cout<<"not pass for: "<<self_loop<<std::endl;
+                //}
             } else {
                 cyclePathsFile<< "self loop: "<<std::endl;
                 cyclePathsFile<<self_loop+"+"<<std::endl;

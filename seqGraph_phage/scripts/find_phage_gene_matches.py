@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+##This scripts copied from https://github.com/Shamir-Lab/SCAPP/blob/master/scapp/find_plasmid_gene_matches.py
 
 # get the phage gene matches in the assembled contigs, given lists of phage-specific genes and contigs
 # usage: python -c <contigs file> -o <output dir> -g <phage-specific gene files> -p <phage-specific protein files> -dg <blast gene database> -dp <blast protein database>
