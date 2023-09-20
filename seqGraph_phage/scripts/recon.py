@@ -9,6 +9,7 @@ def parse_blast(blast_in, blast_ratio, refs):
     prev_seg = ""
     prev_len = 0
     prev_ref = ""
+    prev_seg_len = 0
     for ref in refs:
         ref_blast_segs[ref] = set()
     for line in blast_in.readlines():
@@ -20,13 +21,14 @@ def parse_blast(blast_in, blast_ratio, refs):
         if (prev_seg != t[0] and prev_seg != "") or (prev_ref != t[1] and prev_ref != ""):
             #if "EDGE_27711765_length_1685_cov_5" in prev_seg:
                 #print(prev_len, elen,"xdxd")
-            elen = prev_seg.split("_")[3]
+            elen = prev_seg_len
             if float(prev_len) / float(elen) > blast_ratio:
                 ref_blast_segs[prev_ref].add(prev_seg)
                 #blast_segs.add(prev_seg)
             prev_seg = t[0]
             prev_ref = t[1]
             prev_len = int(t[5])
+            prev_seg_len = int(t[3])
         else:
             if float(t[2]) > blast_ratio*100:
                 #if "EDGE_27711765_length_1685_cov_5" in prev_seg:
@@ -34,8 +36,9 @@ def parse_blast(blast_in, blast_ratio, refs):
                 prev_len = prev_len + int(t[5])
             prev_seg = t[0]
             prev_ref = t[1]
+            prev_seg_len = int(t[3])
     if prev_seg != "":
-        elen = prev_seg.split("_")[3]
+        elen = prev_seg_len
         if float(prev_len) / float(elen) > blast_ratio:
             ref_blast_segs[prev_ref].add(prev_seg)
             #blast_segs.add(t[0])
@@ -43,7 +46,7 @@ def parse_blast(blast_in, blast_ratio, refs):
 
 
 def run_samtools_depth(input_bam, region):
-    cmd = f'samtools depth -r {region} {input_bam}'
+    cmd = f'{samtools} depth -r {region} {input_bam}'
     result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     if result.returncode != 0:
@@ -86,7 +89,7 @@ def get_depth(segs, bam):
 graph = open(sys.argv[1])  # graph
 segf = open(sys.argv[3])  # 需要从新的segs
 outs = sys.argv[2]  # 输出prefix
-depth = float(sys.argv[4])  # samtools 计算而来
+samtools = sys.argv[4]  # samtools
 min_support=1
 if len(sys.argv) > 5:
     min_support = int(sys.argv[5])
@@ -204,7 +207,7 @@ ref_segs = parse_blast(blast_stream, blast_ratio, list(ref_name_records.values()
     #outs_f.close()
 i = 0
 # print(out_juncs)
-for js in out_juncs:
+for idx,js in enumerate(out_juncs):
     outs_f = open(outs + "_" + str(i) + "_" + ref_name_records[i] + ".second", "w")
     current_count = len(ref_segs[ref_name_records[i]])
     prev_ref_segs_count = 0 
@@ -216,6 +219,8 @@ for js in out_juncs:
             ref_segs[ref_name_records[i]].add(j[1])
             ref_segs[ref_name_records[i]].add(j[3])
         current_count = len(ref_segs[ref_name_records[i]])
+    if len(js) == 0:
+        ref_segs[ref_name_records[i]] = segs[idx]
     ref_segs_copy_corrected = get_depth(ref_segs[ref_name_records[i]], bam)
     for seg in ref_segs_copy_corrected:
         outs_f.write(seg+"\n")
@@ -225,3 +230,4 @@ for js in out_juncs:
         outs_f.write(" ".join(j)+"\n")
     i = i + 1
     outs_f.close()
+

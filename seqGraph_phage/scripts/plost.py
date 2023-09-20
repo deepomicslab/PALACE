@@ -6,45 +6,58 @@ import re
 import os
 ref_list = {}
 f = open(sys.argv[1])
-blast_ratio=float(sys.argv[5])
+cycle_txt = sys.argv[2]
+fasta_fai = sys.argv[3]
+second_match = open(sys.argv[4], 'w')
+run_model = sys.argv[5]
+blast_ratio = float(sys.argv[6])
+blast_len_threshold=int(sys.argv[7])
 single_ref = ""
-if len(sys.argv)>5:
-    single_ref = sys.argv[6]
+if len(sys.argv)>8:
+    single_ref = sys.argv[8]
 for line in f:
     line = line.strip("\n").split()
     if line[1] not in ref_list:
         ref_list[line[1]] = int(line[4])
 f.close()
+fai_len = {}
+with open(fasta_fai, 'r') as f:
+    for line in f:
+        fields = line.strip().split('\t')
+        fai_len[fields[0]] = int(fields[1])
+def get_seg_len(seg):
+    seg_p = seg.replace("+","").replace("-","")
+    return fai_len[seg_p]
 def get_line_len(line):
     result_len = 0
     vs = re.split(r'[+-]',line)
     for v in vs:
         if v == "":
             continue
-        edgev = v.split("_")
-        if len(edgev) <= 4:
-            result_len = result_len + int(edgev[2])
-        else:
-            result_len = result_len + int(edgev[3])
+        result_len = result_len + get_seg_len(v)
+        #edgev = v.split("_")
+        #if len(edgev) <= 4:
+        #    result_len = result_len + int(edgev[2])
+        #else:
+        #    result_len = result_len + int(edgev[3])
     return result_len
 ref_contig = {}
 f_in = open(sys.argv[1])
 res = set()
-if sys.argv[4] == "1":
-    with open(sys.argv[2]) as r:
+if run_model == "1":
+    with open(cycle_txt) as r:
         for line in r.readlines():
             line_len = 0
             splited=re.split(r'[+-]',line.strip())
             for v in splited:
                 if v == "" or v ==" ":
                     continue
-                line_len = line_len + int(v.split('_')[3])
+                line_len = line_len + get_line_len(v)
             if line_len >= 10000:
             #print(line,"xxx\n")
                 liner = line.replace("cycle","").replace("score","").replace("self","").replace("gene","")
                 res.add(liner.strip("\n"))
 # 生成需要第二步match的文件： format: res \t ref
-second_match = open(sys.argv[3], 'w')
 
 title_contig = {}
 ref_contig_l = {}
@@ -56,14 +69,14 @@ for line in f_in.readlines():
     t = line.strip().split("\t")
     #if "EDGE_28981966_length_1824_cov_10" in prev_seg:
     #    print(prev_len,"tdtd")
-    if (t[1] not in single_ref):
+    if (single_ref != "" and  t[1] not in single_ref):
         continue
     if (prev_seg != t[0] and prev_seg != "") or (prev_ref != t[1] and prev_ref != ""):
     #    if "EDGE_28981966_length_1824_cov_10" in prev_seg:
     #        print(prev_len, elen,"xdxd")
         elen = get_line_len(prev_seg)
-        #if float(prev_len) / float(elen) > blast_ratio or prev_len > 2000:
-        if float(prev_len) / float(elen) > blast_ratio:
+        if float(prev_len) / float(elen) > blast_ratio or prev_len > blast_len_threshold:
+        #if float(prev_len) / float(elen) > blast_ratio:
             blast_segs.add(prev_seg)
         prev_seg = t[0]
         prev_ref = t[1]
@@ -77,8 +90,8 @@ for line in f_in.readlines():
         prev_ref = t[1]
 elen = get_line_len(prev_seg)
 if elen != 0:
-    #if float(prev_len) / float(elen) > blast_ratio or prev_len > 2000:
-    if float(prev_len) / float(elen) > blast_ratio:
+    if float(prev_len) / float(elen) > blast_ratio or prev_len > blast_len_threshold:
+    #if float(prev_len) / float(elen) > blast_ratio:
         blast_segs.add(t[0])
 f_in.close()
 for fline in open(sys.argv[1]).readlines():
@@ -87,7 +100,7 @@ for fline in open(sys.argv[1]).readlines():
     count = contig_num - 1
     contig = ""
     line = fline.strip("\n").split("\t")
-    if line[1] not in single_ref:
+    if single_ref != "" and line[1] not in single_ref:
         continue
     if line[0] not in blast_segs:
         continue

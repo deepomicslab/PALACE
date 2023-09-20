@@ -15,7 +15,6 @@ record_dict = SeqIO.to_dict(SeqIO.parse(fa, "fasta"))
 
 for line in ref_indx.readlines():
     t = re.split(r"\s+",line)
-    print(t)
     ref_name = fai_array[int(t[1])-1]
     out_ref.write(">"+ref_name+"\n")
     out_ref.write(str(record_dict[ref_name].seq)+"\n")

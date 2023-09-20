@@ -180,8 +180,11 @@ if __name__ == "__main__":
         data_list.append(data)
 
     loader = DataLoader(data_list, batch_size=100, shuffle=False, follow_batch=['x_src', 'x_dst'])
-    
-    model = torch.load("/home/ruohawang2/12.Phage_assem/phage_scoring/GCNFrame/GCN_model_retrained.pt")
+
+    if torch.cuda.is_available():
+        model = torch.load(sys.argv[5])
+    else:
+        model = torch.load(sys.argv[5], map_location=torch.device('cpu'))
     model.eval()
     if reverse:
         f_out = open(output_file, "w")
