@@ -28,25 +28,31 @@ add_executable(matching main.cpp ${SOURCE_FILES} include/util.h)
 add_executable(rDistance utils/reads_overlap.cpp utils/reads_overlap.h include/util.h)
 add_executable(eref extract_ref.cpp )
 add_executable(bDistance utils/bDistance.cpp utils/bDistance.h include/util.h)
-target_link_libraries(rDistance -lhts)
-target_link_libraries(bDistance -lhts)
-target_link_libraries(matching -lhts)
-target_link_libraries(eref -lpthread)
-target_include_directories(${PROJECT_NAME} PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>)
 
-set_target_properties(${PROJECT_NAME} PROPERTIES
-        VERSION ${PROJECT_VERSION}
-        SOVERSION 1)
+if (NOT $ENV{CONDA_PREFIX} STREQUAL "")
+    message(STATUS "CURRENT CONDA PREFIX: $ENV{CONDA_PREFIX}")
+    include_directories($ENV{CONDA_PREFIX}/include)
+    link_directories($ENV{CONDA_PREFIX}/lib)
+    target_link_libraries(rDistance $ENV{CONDA_PREFIX}/lib/libhts.so)
+    target_link_libraries(bDistance $ENV{CONDA_PREFIX}/lib/libhts.so)
+    target_link_libraries(matching $ENV{CONDA_PREFIX}/lib/libhts.so)
+    target_link_libraries(eref -lpthread)
+endif ()
+# target_include_directories(${PROJECT_NAME} PUBLIC
+#         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+#         $<INSTALL_INTERFACE:include>)
 
-install(TARGETS ${PROJECT_NAME} EXPORT seqGraphConfig
-        ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME  DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
+# set_target_properties(${PROJECT_NAME} PROPERTIES
+#         VERSION ${PROJECT_VERSION}
+#         SOVERSION 1)
 
-install(EXPORT seqGraphConfig DESTINATION share/seqGraph/cmake)
+# install(TARGETS ${PROJECT_NAME} EXPORT seqGraphConfig
+#         ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#         LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#         RUNTIME  DESTINATION ${CMAKE_INSTALL_BINDIR})
+# install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME})
 
-export(TARGETS ${PROJECT_NAME} FILE seqGraphConfig.cmake)
+# install(EXPORT seqGraphConfig DESTINATION share/seqGraph/cmake)
+
+# export(TARGETS ${PROJECT_NAME} FILE seqGraphConfig.cmake)
 
