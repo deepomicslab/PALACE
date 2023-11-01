@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
             ("s,self_l", "Cycle result", cxxopts::value<bool>()->default_value("false"))
             ("min_l", "Min length to print", cxxopts::value<int>()->default_value("-1"))
             ("sub_only", "Only get all sub graph",cxxopts::value<std::string>()->default_value(""))
-            ("model", "0, plasmid; 1: phage or single strain;",cxxopts::value<int>()->default_value("0"))
+            // ("model", "1: phage;",cxxopts::value<int>()->default_value("0"))
             ("ignore_copy", "Ignore copy number", cxxopts::value<bool>()->default_value("false"))
             ("h,help", "Print usage");
     auto result = options.parse(argc,argv);
@@ -170,7 +170,8 @@ int main(int argc, char *argv[]) {
     std::string resultCF = result["result_c"].as<std::string>();
         int iterRounds = result["iteration"].as<int>();
     VERBOSE = result["verbose"].as<int>();
-    MODEL = result["model"].as<int>();
+    // MODEL = result["model"].as<int>();
+    MODEL = 1;
 
 
     std::ifstream infile(graphF);
@@ -419,19 +420,19 @@ int main(int argc, char *argv[]) {
 //                    else{
 //                        not_print_tag = false;
 //                    }
-                    if (MODEL == 0) {
+                    // if (MODEL == 0) {
                         //std::vector<std::string> tokens;
 			//tokenize(m->idx2StrDir(v).substr(0, m->idx2StrDir(v).length()-1), tokens, "_");
                         //int length = std::stoi(tokens[3]);
                         //total_length+=length;
-                    }
+                    // }
                 }
                 //if(MODEL ==0 and (total_length<MIN_L|| not_print_tag)){
                 //    continue;
                 //}
-                if(MODEL ==0 and (not_print_tag)){
-                    continue;
-                }
+                // if(MODEL ==0 and (not_print_tag)){
+                //     continue;
+                // }
 //                bool self_loop_flag = false;
 //                std::string path_str;
                 std::vector<std::string> tmp;
