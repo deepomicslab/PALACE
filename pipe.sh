@@ -32,19 +32,17 @@ EXTRACT_REF="$PALACE/seqGraph_phage/build/eref"
 
 SCRIPTS=$PALACE/seqGraph_phage/scripts
 MAKE_FA_FROM_PATH="$SCRIPTS/make_fa_from_path.py"
-MAKE_FA_FROM_RESULT="$SCRIPTS/make_fa_from_result.py"
-MAKE_FA_FROM_BLAST="$SCRIPTS/make_fa_from_blast.py"
+FILTER_RESULT="$SCRIPTS/filter_result.py"
 MAKE_FINAL_FA="$SCRIPTS/make_final_fa.py"
 FILTER_CYCLE="$SCRIPTS/filter_cycle.py"
 GET_REF_BY_INDEX="$SCRIPTS/get_ref_by_index.py"
-PLOST="$SCRIPTS/plost.py"
-RECON="$SCRIPTS/recon.py"
-MAKE_FASTA_FROM_FASTG=="$SCRIPTS/make_fasta_from_fastg.py"
+FILTER_BY_BLAST="$SCRIPTS/filter_by_blast.py"
+EXTRACT_BY_REF="$SCRIPTS/extract_by_ref.py"
+SPLIT_FASTG=="$SCRIPTS/split_fastg.py"
 FIND_PHAGE_GENE_MATCHES="$SCRIPTS/find_phage_gene_matches.py"
 PHAGE_SCORING="$SCRIPTS/phage_scoring.py"
-EXTRACT_FA_BWA="$SCRIPTS/extract_fa_bwa.py"
 CORRECTED_DUP="$SCRIPTS/corrected_dup.py"
-PARSE="$SCRIPTS/parse.py"
+FILTER_GRAPH="$SCRIPTS/filter_graph.py"
 
 ###############################intermediate files###############################
 filter_fastq1="$out_dir/01-qc/${prefix}_1_filter.fastq"
@@ -71,7 +69,7 @@ create_dir $out_dir/02-assembly
 echo "$(print_time) Step 2, assembly"
 if [ ! -s "$out_dir/02-assembly/contigs.fasta" ]; then
     $SPADES --meta -o $out_dir/02-assembly -1 $filter_fastq1 -2 $filter_fastq2 -t $threads --phred-offset 33
-    $PYTHON $MAKE_FASTA_FROM_FASTG -g $assembly_fastg -o $assembly_fasta
+    $PYTHON $SPLIT_FASTG -g $assembly_fastg -o $assembly_fasta
 fi
 echo "$(print_time) Step 2, assembly done"
 echo "$(print_time) Step 2, start align..."
@@ -122,7 +120,7 @@ if [ ! -f "$out_dir/04-match/${prefix}_graph.txt" ]; then
 fi
 if [ ! -f "$out_dir/04-match/${prefix}_filtered_graph.txt" ]; then
 ## Collect the filtered contigs, meeting one requirement, and the connected contigs
-    $PYTHON $PARSE $assembly_fastg.fai $out_dir/04-match/${prefix}_graph.txt $out_dir/04-match/${prefix}_filtered_graph.txt $first_depth 0 $hit_out $node_score $assembly_fasta.blast  0.7 $assembly_fasta.fai
+    $PYTHON $FILTER_GRAPH $assembly_fastg.fai $out_dir/04-match/${prefix}_graph.txt $out_dir/04-match/${prefix}_filtered_graph.txt $first_depth 0 $hit_out $node_score $assembly_fasta.blast  0.7 $assembly_fasta.fai
 fi
 echo "$(print_time) Step 4, graph created"
 echo "$(print_time) Step 4, start matching"
@@ -137,7 +135,7 @@ if [ ! -f "$out_dir/04-match/${prefix}_unfiltered_phagescore.txt" ];then
     $PYTHON $PHAGE_SCORING $out_dir/04-match/${prefix}_unfiltered.fasta $out_dir/04-match/${prefix}_unfiltered_phagescore.txt False $threads $GCN_MODEL
 fi
 if [ ! -f "$out_dir/04-match/${prefix}_filtered.fasta" ];then
-    $PYTHON $MAKE_FA_FROM_RESULT $assembly_fasta $out_dir/04-match/${prefix}_all_result.txt $out_dir/04-match/${prefix}_filtered.fasta $assembly_fasta.blast 0.75 $hit_out $out_dir/04-match/${prefix}_unfiltered_phagescore.txt $out_dir/04-match/${prefix}_filtered_cycle.txt
+    $PYTHON $FILTER_RESULT $assembly_fasta $out_dir/04-match/${prefix}_all_result.txt $out_dir/04-match/${prefix}_filtered.fasta $assembly_fasta.blast 0.75 $hit_out $out_dir/04-match/${prefix}_unfiltered_phagescore.txt $out_dir/04-match/${prefix}_filtered_cycle.txt
 fi
 if [ ! -f "$out_dir/04-match/${prefix}_filtered.fasta.blast" ];then
     blastn -query $out_dir/04-match/${prefix}_filtered.fasta -out $out_dir/04-match/${prefix}_filtered.fasta.blast -db $phage_refs -outfmt "6 qaccver saccver pident qlen slen length mismatch gapopen qstart qend sstart send evalue bitscore"
@@ -148,7 +146,7 @@ echo "Finished Step 4"
 create_dir $out_dir/05-furth/second_match
 echo "Starting Step 5, furth assemblying..."
 ## Meet two requirements
-$PYTHON $PLOST $out_dir/04-match/${prefix}_filtered.fasta.blast $out_dir/04-match/${prefix}_filtered_cycle.txt $assembly_fasta.fai $out_dir/05-furth/need_second_match.txt 0 0.7 2000 > $out_dir/04-match/${prefix}_tmp_cycle.txt
+$PYTHON $FILTER_BY_BLAST $out_dir/04-match/${prefix}_filtered.fasta.blast $out_dir/04-match/${prefix}_filtered_cycle.txt $assembly_fasta.fai $out_dir/05-furth/need_second_match.txt 0 0.7 2000 > $out_dir/04-match/${prefix}_tmp_cycle.txt
 contig_names=$(cut -f 2 $out_dir/05-furth/need_second_match.txt | tr '\n' ' ')
 $SAMTOOLS faidx ${phage_refs} ${contig_names} > $out_dir/05-furth/need_second.fasta
 if [ ! -f "$out_dir/05-furth/need_second.fasta.blast" ];then
@@ -156,7 +154,7 @@ if [ ! -f "$out_dir/05-furth/need_second.fasta.blast" ];then
 fi
 ## extract graph from bam
 #sub_depth=`$SAMTOOLS depth ${first_bam} ${contig_names} |  awk '{sum+=$3} END { print sum/NR}'` #$10
-$PYTHON $RECON $out_dir/04-match/${prefix}_graph.txt $out_dir/05-furth/second_match/$prefix $out_dir/05-furth/need_second_match.txt ${SAMTOOLS} 5 ${first_bam} $out_dir/05-furth/need_second.fasta.blast 0.7 $out_dir/05-furth/second_match
+$PYTHON $EXTRACT_BY_REF $out_dir/04-match/${prefix}_graph.txt $out_dir/05-furth/second_match/$prefix $out_dir/05-furth/need_second_match.txt ${SAMTOOLS} 5 ${first_bam} $out_dir/05-furth/need_second.fasta.blast 0.7 $out_dir/05-furth/second_match
 
 # $PYTHON $recon $assembly_fastg.fai $out_dir/${prefix}_ass_blast.txt $prefix $out_dir/need_second_match.txt $depth
 echo "recon done, Start Second Matching\n"
@@ -173,7 +171,7 @@ for i in `ls $out_dir/05-furth/second_match/*.second`; do
     echo $second" second match"
     $PYTHON $MAKE_FA_FROM_PATH $assembly_fasta ${second}_linear.txt ${second}_unfiltered.fasta 1;
     blastn -query ${second}_unfiltered.fasta -out ${second}_unfiltered.fasta.blast -db $phage_refs -outfmt "6 qaccver saccver pident qlen slen length mismatch gapopen qstart qend sstart send evalue bitscore" ;
-    $PYTHON $PLOST ${second}_unfiltered.fasta.blast ${second}_cycle.txt $assembly_fasta.fai ${second}_tmp.txt 0 0.7 2000 ${second}> ${second}_all_result.txt
+    $PYTHON $FILTER_BY_BLAST ${second}_unfiltered.fasta.blast ${second}_cycle.txt $assembly_fasta.fai ${second}_tmp.txt 0 0.7 2000 ${second}> ${second}_all_result.txt
 done
 echo "$(print_time) Finished Step 5"
 

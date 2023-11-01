@@ -1,6 +1,28 @@
 # PALACE
 PALACE is a graph-based algorithm to reconstruct the phage genome. PALACE currently supports normal pair-end reads, Oxford Nanopore(ONT) and PacBio SMRT(PB) reads. Please check xxx for detail.
-## Prerequisites
+## Installation
+### Approach 1, install with mamba/conda.
+1. Clone the repository and enter the directory:
+
+```
+git clone https://github.com/deepomicslab/PALACE
+cd ./Ambigram/
+```
+2. Create a conda environment with all dependencies and enter the environment:
+```
+mamba env create --prefix=./PALACE -f environment.yml # conda env create --prefix=./PALACE -f environment.yml
+mamba activate ./PALACE/seqGraph_phage/ # conda activate ./PALACE/seqGraph_phage/
+```
+3. Create a build directory and compile PALACE under it (use **sudo**, if required):
+
+```
+mkdir build
+cd build
+cmake ..
+make && make install
+```
+### Approach 2, from scratch
+### Prerequisites
 ### Python packages
 * pysam==0.17.0
 * numpy==1.20.2
@@ -26,7 +48,6 @@ Please check https://pytorch.org/get-started/previous-versions/ for installation
 * [ncbi-blast](https://www.ncbi.nlm.nih.gov/books/NBK569861/) Sequence alignment tool.
 * [htslib](http://www.htslib.org/download/)
 
-## Installation
 Install the prerequisites first, clone the repository and enter the directory:
 ```
 git clone https://github.com/deepomicslab/PALACE
@@ -39,7 +60,9 @@ cd build
 cmake ..
 make
 ```
-## Using Ambigram
+
+
+## Using PALACE
 1. Config the config.txt file, [here](https://github.com/deepomicslab/PALACE/blob/main/config.txt) is a demo file.
 * ```fastq1```, Read1 paired fastq file.
 * ```fastq2```, Read2 paired fastq file.

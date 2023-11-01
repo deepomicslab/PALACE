@@ -1,6 +1,5 @@
 #input
 fastq1=/home/ruohawang2/12.Phage_assem/phage/s1_5_1_out/s1_5_1_out_1.fastq.gz
-##can be empty if not ngs
 fastq2=/home/ruohawang2/12.Phage_assem/phage/s1_5_1_out/s1_5_1_out_2.fastq.gz
 ##phage reference database, https://github.com/deepomicslab/PALACE.git
 phagedb=/home/ruohawang2/12.Phage_assem/pipeline/genome_db/checkv_reps.fna
