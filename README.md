@@ -1,7 +1,7 @@
 # PALACE
 PALACE is a graph-based algorithm to reconstruct the phage genome. PALACE currently supports normal pair-end reads, Oxford Nanopore(ONT) and PacBio SMRT(PB) reads. Please check xxx for detail.
 ## Installation
-### (Recommend)Approach 1, install with mamba.
+### Approach 1, install with mamba/conda.
 1. Clone the repository and enter the directory:
 
 ```
@@ -10,8 +10,8 @@ cd ./Ambigram/
 ```
 2. Create a conda environment with all dependencies and enter the environment:
 ```
-conda env create --prefix=./PALACE -f environment.yml
-conda activate ./PALACE/seqGraph_phage/
+mamba env create --prefix=./PALACE -f environment.yml # conda env create --prefix=./PALACE -f environment.yml
+mamba activate ./PALACE/seqGraph_phage/ # conda activate ./PALACE/seqGraph_phage/
 ```
 3. Create a build directory and compile PALACE under it (use **sudo**, if required):
 
