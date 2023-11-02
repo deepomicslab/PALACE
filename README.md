@@ -6,7 +6,7 @@ PALACE is a graph-based algorithm to reconstruct the phage genome. PALACE curren
 
 ```
 git clone https://github.com/deepomicslab/PALACE
-cd ./PALACE/
+cd ./PALACE/seqGraph_phage/
 ```
 2. Create a conda environment with all dependencies and enter the environment:
 ```
