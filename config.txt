@@ -15,10 +15,10 @@ prefix=s1_5_1
 threads=24
 
 #software
-PYTHON=python
-BWA=bwa
-SAMTOOLS=samtools
-FASTP=fastp
-SPADES=spades.py
-NCBI_BIN=/home/ruohawang2/miniconda3/envs/pytorch_gpu/bin
-PALACE=/home/ruohawang2/12.Phage_assem/phage/PALACE
+PYTHON=/home/ruohawang2/12.Phage_assem/PALACE/PALACE/bin/python
+BWA=/home/ruohawang2/12.Phage_assem/PALACE/PALACE/bin/bwa
+SAMTOOLS=/home/ruohawang2/12.Phage_assem/PALACE/PALACE/bin/samtools
+FASTP=/home/ruohawang2/12.Phage_assem/PALACE/PALACE/bin/fastp
+SPADES=/home/ruohawang2/12.Phage_assem/PALACE/PALACE/bin/spades.py
+NCBI_BIN=/home/ruohawang2/12.Phage_assem/PALACE/PALACE/bin
+PALACE=/home/ruohawang2/12.Phage_assem/PALACE
