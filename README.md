@@ -12,7 +12,6 @@ cd ./PALACE
 ```
 mamba env create --prefix=./PALACE -f environment.yml # conda env create --prefix=./PALACE -f environment.yml
 mamba activate ./PALACE # conda activate ./PALACE
-
 ```
 3. Create a build directory and compile PALACE under it (use **sudo**, if required):
 
