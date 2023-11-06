@@ -82,8 +82,7 @@ if [ ! -s "$first_bam.bai" ]; then
     $SAMTOOLS index $first_bam
 fi
 echo "$(print_time) Step 2, align done"
-#first_depth=`$SAMTOOLS depth $first_bam | awk '{sum+=$3} END { print sum/NR}'` #$10
-first_depth=30
+first_depth=`$SAMTOOLS depth $first_bam | awk '{sum+=$3} END { print sum/NR}'` #$10
 echo "$(print_time) Finished Step 2"
 
 ###############################Step 3, search ref from database, search protein and predict phage contigs###############################
@@ -125,7 +124,7 @@ fi
 echo "$(print_time) Step 4, graph created"
 echo "$(print_time) Step 4, start matching"
 ## Maximum matching, outputing linear and circular sequences
-timeout 20m $MATCHING -g $out_dir/04-match/${prefix}_filtered_graph.txt -r $out_dir/04-match/${prefix}_linear.txt -c $out_dir/04-match/${prefix}_cycle.txt -i 10 -v 1 -s
+$MATCHING -g $out_dir/04-match/${prefix}_filtered_graph.txt -r $out_dir/04-match/${prefix}_linear.txt -c $out_dir/04-match/${prefix}_cycle.txt -i 10 -v 1 -s
 cat $out_dir/04-match/${prefix}_linear.txt $out_dir/04-match/${prefix}_cycle.txt > $out_dir/04-match/${prefix}_all_result.txt
 # filter
 if [ ! -f "$out_dir/04-match/${prefix}_unfiltered.fasta" ];then
@@ -163,7 +162,7 @@ echo "recon done, Start Second Matching\n"
 for i in `ls $out_dir/05-furth/second_match/*.second`; do
     fullname=$i
     second=$(echo $fullname | sed 's/\.[^.]*$//');
-    timeout 5m $MATCHING -g $fullname -r ${second}_linear.txt -c ${second}_cycle.txt -i 10 -v 1 --model 1;
+    $MATCHING -g $fullname -r ${second}_linear.txt -c ${second}_cycle.txt -i 10 -v 1;
     if [ $? -eq 124 ]
     then
         echo "The command was terminated because it ran for more than 30 minutes."
@@ -176,7 +175,7 @@ done
 echo "$(print_time) Finished Step 5"
 
 ###############################Step 6, make final result###############################
-
+mkdir -p $out_dir/final_result
 $PYTHON $FILTER_CYCLE $out_dir/04-match/${prefix}_filtered_cycle.txt 1 > $out_dir/final_result/filtered_cycle_res_tmp.txt
 if [ -f "$out_dir/filtered_cycle_res_tmp.txt" ]; then
     cat $out_dir/final_result/filtered_cycle_res_tmp.txt > $out_dir/final_result/${prefix}_final_tmp.txt

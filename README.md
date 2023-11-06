@@ -16,7 +16,7 @@ mamba activate ./PALACE # conda activate ./PALACE
 3. Create a build directory and compile PALACE under it (use **sudo**, if required):
 
 ```
-cd ./PALACE/seqgraph_phage
+cd seqgraph_phage/
 mkdir build
 cd build
 cmake ..
