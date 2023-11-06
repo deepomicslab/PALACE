@@ -175,7 +175,7 @@ done
 echo "$(print_time) Finished Step 5"
 
 ###############################Step 6, make final result###############################
-mkdir -p $out_dir/final_result
+create_dir $out_dir/final_result
 $PYTHON $FILTER_CYCLE $out_dir/04-match/${prefix}_filtered_cycle.txt 1 > $out_dir/final_result/filtered_cycle_res_tmp.txt
 if [ -f "$out_dir/filtered_cycle_res_tmp.txt" ]; then
     cat $out_dir/final_result/filtered_cycle_res_tmp.txt > $out_dir/final_result/${prefix}_final_tmp.txt

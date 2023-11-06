@@ -1,3 +1,4 @@
+#NOTE! PLEASE DO NOT MODIFY THE KEY IN THIS FILE, JUST REPLACE THE VALUE FOR YOUR OWN PATH
 #input
 fastq1=/home/ruohawang2/12.Phage_assem/phage/s1_5_1_out/s1_5_1_out_1.fastq.gz
 fastq2=/home/ruohawang2/12.Phage_assem/phage/s1_5_1_out/s1_5_1_out_2.fastq.gz
@@ -22,3 +23,4 @@ FASTP=/home/ruohawang2/12.Phage_assem/PALACE/PALACE/bin/fastp
 SPADES=/home/ruohawang2/12.Phage_assem/PALACE/PALACE/bin/spades.py
 NCBI_BIN=/home/ruohawang2/12.Phage_assem/PALACE/PALACE/bin
 PALACE=/home/ruohawang2/12.Phage_assem/PALACE
+#end
