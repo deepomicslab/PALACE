@@ -1,5 +1,8 @@
 # PALACE
-PALACE is a graph-based algorithm to reconstruct the phage genome. PALACE currently supports normal pair-end reads, Oxford Nanopore(ONT) and PacBio SMRT(PB) reads. Please check xxx for detail.
+PALACE is a computational framework based on deep learning models and conjugate graph theory to assemble high-quality and confident phage genomes from metagenomic sequencing data. PALACE currently supports normal pair-end reads, Oxford Nanopore(ONT) and PacBio SMRT(PB) reads. The assembled phages genomes analyzed in the manuscript are available at [Google Drive](https://drive.google.com/drive/folders/1IN_HbWpjdS4Dhjpir5h_5EY52TDFSrpR?usp=sharing).
+ 
+![image](https://github.com/deepomicslab/PALACE/blob/main/pipeline.png)
+ 
 ## Installation
 ### Approach 1, install with mamba/conda.
 1. Clone the repository and enter the directory:
@@ -10,8 +13,11 @@ cd ./PALACE
 ```
 2. Create a conda environment with all dependencies and enter the environment:
 ```
-mamba env create --prefix=./PALACE -f environment.yml # conda env create --prefix=./PALACE -f environment.yml
-mamba activate ./PALACE # conda activate ./PALACE
+mamba env create --prefix=./PALACE -f environment.yml  
+mamba activate ./PALACE  
+Or
+conda env create --prefix=./PALACE -f environment.yml  
+conda activate ./PALACE  
 ```
 3. Create a build directory and compile PALACE under it (use **sudo**, if required):
 
@@ -45,11 +51,11 @@ Please check https://pytorch.org/get-started/previous-versions/ for installation
 * [bwa](https://github.com/lh3/bwa) BWA is a software package for reads mapping.
 * [samtools](http://www.htslib.org/download/) Reading/writing/editing/indexing/viewing SAM/BAM/CRAM format.
 * [fastp](https://github.com/OpenGene/fastp) Provide fast all-in-one preprocessing for FastQ files.
-* [spades](https://github.com/ablab/spades) Genome assembler
+* [spades](https://github.com/ablab/spades) Pre-assembly
 * [ncbi-blast](https://www.ncbi.nlm.nih.gov/books/NBK569861/) Sequence alignment tool.
 * [htslib](http://www.htslib.org/download/)
 
-Install the prerequisites first, clone the repository and enter the directory:
+Install the prerequisites first, then clone the repository and enter the directory:
 ```
 git clone https://github.com/deepomicslab/PALACE
 #create a new mamba(conda) env
@@ -62,9 +68,8 @@ cmake ..
 make
 ```
 
-
 ## Using PALACE
-1. Config the config.txt file, [here](https://github.com/deepomicslab/PALACE/blob/main/config.txt) is a demo file.
+1. Config the config.txt file, [here](https://github.com/deepomicslab/PALACE/blob/main/config.txt) is a demo file.  
 * ```fastq1```, Read1 paired fastq file.
 * ```fastq2```, Read2 paired fastq file.
 * ```phagedb```, Phage reference database, this is a phage reference database, the latest database can be download from [here](https://portal.nersc.gov/CheckV/checkv-db-v1.5/genome_db/checkv_reps.fna).
@@ -79,9 +84,9 @@ make
 * ```SPADES```, spades.py path.
 * ```NCBI_BIN```, ncbi-blast bin path, must contains makeblastdb, blastn and tblastn 
 * ```PALACE```, PALACE path.
-2. Runing PALACE.
-
+2. Runing PALACE.  
 * ``` bash PALACE_PATH/pipe.sh config.txt```
+
 ## Output
 * ```01-qc/```, fastp output.
 * ```02-assembly/```, Raw assembly result with spades with --meta.
@@ -89,7 +94,9 @@ make
 * ```04-match/```, This directory contains the graph structure of the conjugate graph(```{prefix}_filtered_graph.txt```), the results of the graph decompose(```{prefix}_all_result.txt```).
 * ```05-furth```, This directory contains the local matching result based on the phage reference.
 * ```final_result```, This directory contains the final result, final contig paths for phages(```{prefix}_final.txt```), cycle paths for phages(```{prefix}_cycle.txt```), phages fasta(```{prefix}_final.fasta)
+
 ## Author
-PALACE is developed by DeepOmics lab under the supervision of Dr. Li Shuaicheng, City University of Hong Kong, Hong Kong, China. Should you have any queries, please feel free to contact us by gzpan2-c@my.cityu.edu.hk or ruhawang2@my.c.
+PALACE is developed by DeepOmics lab under the supervision of Dr. Li Shuaicheng, City University of Hong Kong, Hong Kong, China. Should you have any queries, please feel free to contact us by gzpan2-c@my.cityu.edu.hk or ruohawang2-c@my.cityu.edu.hk.
+
 ## License
 This project is licensed under the MIT License - see the [LICENSE.txt](https://github.com/deepomicslab/PALACE/blob/main/LICENSE.txt) file for details.
