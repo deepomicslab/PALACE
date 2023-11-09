@@ -72,8 +72,8 @@ make
 1. Config the config.txt file, [here](https://github.com/deepomicslab/PALACE/blob/main/config.txt) is a demo file.  
 * ```fastq1```, Read1 paired fastq file.
 * ```fastq2```, Read2 paired fastq file.
-* ```phagedb```, Phage reference database, this is a phage reference database, the latest database can be download from [here](https://portal.nersc.gov/CheckV/checkv-db-v1.5/genome_db/checkv_reps.fna).
-* ```protein_db```, Phage protein database, this is a phage protein database, the latest database can be download from [here](https://portland-my.sharepoint.com/:f:/g/personal/gzpan2-c_my_cityu_edu_hk/EpVA0ISAp4FBrclyldwpjEwBBHujF4zG2Gu3Vxa5AZICJw?e=5z2qUe).
+* ```phagedb```, Phage reference database; the latest phage reference database can be download from [here](https://portal.nersc.gov/CheckV/checkv-db-v1.5/genome_db/checkv_reps.fna).
+* ```protein_db```, Phage protein database; the latest phage protein database can be download from [here](https://portland-my.sharepoint.com/:f:/g/personal/gzpan2-c_my_cityu_edu_hk/EpVA0ISAp4FBrclyldwpjEwBBHujF4zG2Gu3Vxa5AZICJw?e=5z2qUe).
 * ```threads```, Threads to be used.
 * ```out_dir```, Output directory.
 * ```prefix```, Intermediate file prefix, can be sample name.
