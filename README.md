@@ -26,7 +26,9 @@ cd seqgraph_phage/
 mkdir build
 cd build
 cmake ..
-make && make install
+make
+cd scripts/
+python setup.py build_ext --inplace
 ```
 ### Approach 2, from scratch
 ### Prerequisites
@@ -66,6 +68,8 @@ mkdir build
 cd build
 cmake ..
 make
+cd scripts/
+python setup.py build_ext --inplace
 ```
 
 ## Using PALACE
