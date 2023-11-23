@@ -6,6 +6,8 @@ fastq2=/home/ruohawang2/12.Phage_assem/phage/s1_5_1_out/s1_5_1_out_2.fastq.gz
 phagedb=/home/ruohawang2/12.Phage_assem/pipeline/genome_db/checkv_reps.fna
 ##phage protein database, https://github.com/deepomicslab/PALACE.git
 protein_db=/home/ruohawang2/12.Phage_assem/phage_protein_anno/SCAPP/scapp/protein_db
+##gcn model, https://github.com/deepomicslab/PALACE.git
+gcn_model=/scratch/project/cs_shuaicli/pgz/phage/PALACE_sim/GCN_model_retrained.pt
 
 #output
 ##output directory

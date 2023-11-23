@@ -76,8 +76,9 @@ python setup.py build_ext --inplace
 1. Config the config.txt file, [here](https://github.com/deepomicslab/PALACE/blob/main/config.txt) is a demo file.  
 * ```fastq1```, Read1 paired fastq file.
 * ```fastq2```, Read2 paired fastq file.
-* ```phagedb```, Phage reference database; the latest phage reference database can be download from [here](https://portal.nersc.gov/CheckV/checkv-db-v1.5/genome_db/checkv_reps.fna).
+* ```phagedb```, Phage reference database; the latest phage reference database can be download from [here](https://portland-my.sharepoint.com/:u:/g/personal/gzpan2-c_my_cityu_edu_hk/ESVoQEuNOz9HoBfP9vXho-EBUWQa63zSRvfWxRYmIxb2ww?e=ynlAO1).
 * ```protein_db```, Phage protein database; the latest phage protein database can be download from [here](https://portland-my.sharepoint.com/:f:/g/personal/gzpan2-c_my_cityu_edu_hk/EpVA0ISAp4FBrclyldwpjEwBBHujF4zG2Gu3Vxa5AZICJw?e=5z2qUe).
+*```gcn_model```, Deeplearning model for phage contigs predict; can be download from [here](https://portland-my.sharepoint.com/:u:/g/personal/gzpan2-c_my_cityu_edu_hk/EcgNImBdl9dBnS8Qza0U930B3ENSDDh5EeAZoSkX95VtHQ?e=E1SK0y)
 * ```threads```, Threads to be used.
 * ```out_dir```, Output directory.
 * ```prefix```, Intermediate file prefix, can be sample name.

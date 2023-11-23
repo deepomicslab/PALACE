@@ -95,7 +95,7 @@ echo "$(print_time) Step 3, search protein done"
 echo "$(print_time) Step 3, searching contigs..."
 # deep_learning
 if [ ! -s "$node_score" ]; then
-    $PYTHON $PHAGE_SCORING $assembly_fasta $node_score True $threads $GCN_MODEL
+    $PYTHON $PHAGE_SCORING $assembly_fasta $node_score True $threads $gcn_model
 fi
 echo "$(print_time) Step 3, search contigs done"
 echo "$(print_time) Step 3, searching reference..."
@@ -131,7 +131,7 @@ if [ ! -f "$out_dir/04-match/${prefix}_unfiltered.fasta" ];then
     $PYTHON $MAKE_FA_FROM_PATH $assembly_fasta $out_dir/04-match/${prefix}_all_result.txt $out_dir/04-match/${prefix}_unfiltered.fasta 0
 fi
 if [ ! -f "$out_dir/04-match/${prefix}_unfiltered_phagescore.txt" ];then
-    $PYTHON $PHAGE_SCORING $out_dir/04-match/${prefix}_unfiltered.fasta $out_dir/04-match/${prefix}_unfiltered_phagescore.txt False $threads $GCN_MODEL
+    $PYTHON $PHAGE_SCORING $out_dir/04-match/${prefix}_unfiltered.fasta $out_dir/04-match/${prefix}_unfiltered_phagescore.txt False $threads $gcn_model
 fi
 if [ ! -f "$out_dir/04-match/${prefix}_filtered.fasta" ];then
     $PYTHON $FILTER_RESULT $assembly_fasta $out_dir/04-match/${prefix}_all_result.txt $out_dir/04-match/${prefix}_filtered.fasta $assembly_fasta.blast 0.75 $hit_out $out_dir/04-match/${prefix}_unfiltered_phagescore.txt $out_dir/04-match/${prefix}_filtered_cycle.txt
