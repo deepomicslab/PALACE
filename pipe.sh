@@ -21,14 +21,14 @@ create_dir() {
     mkdir -p "$dir_name"
     echo "Directory $dir_name has been created."
     else
-    echo "Directory $dir_name already exists. skip"
+    echo "Directory $dir_name already exists."
     fi
 }
 create_dir $out_dir
 ###############################SCRIPTS###############################
 MATCHING=$PALACE/seqGraph_phage/build/matching
-RDistance="$PALACE/seqGraph_phage/build/rDistance"
-EXTRACT_REF="$PALACE/seqGraph_phage/build/eref"
+RDistance=$PALACE/seqGraph_phage/build/rDistance
+EXTRACT_REF=$PALACE/seqGraph_phage/build/eref
 
 SCRIPTS=$PALACE/seqGraph_phage/scripts
 MAKE_FA_FROM_PATH="$SCRIPTS/make_fa_from_path.py"
@@ -52,15 +52,14 @@ assembly_fasta="$out_dir/02-assembly/assembly_graph.fasta"
 assembly_fastg="$out_dir/02-assembly/assembly_graph.fastg"
 hit_out="$out_dir/03-search/hit_seqs.out"
 node_score="$out_dir/03-search/node_scores.out"
-phage_refs="$out_dir/04-match/phage_refs.fasta"
+phage_refs="$out_dir/03-search/phage_refs.fasta"
 
 
 ###############################Step 1, fastqc###############################
 create_dir $out_dir/01-qc
 echo "$(print_time) Step 1, fastq QC..."
 if [[ ! -s "$filter_fastq1" && ! -s "$filter_fastq2" ]]; then
-    echo $fastq1
-    $FASTP -i $fastq1 -I $fastq2 -o $filter_fastq1 -O $filter_fastq2 -w $threads
+        $FASTP -i $fastq1 -I $fastq2 -o $filter_fastq1 -O $filter_fastq2 -w $threads
 fi
 echo "$(print_time) Finished Step 1"
 
@@ -69,8 +68,8 @@ create_dir $out_dir/02-assembly
 echo "$(print_time) Step 2, assembly"
 if [ ! -s "$out_dir/02-assembly/contigs.fasta" ]; then
     $SPADES --meta -o $out_dir/02-assembly -1 $filter_fastq1 -2 $filter_fastq2 -t $threads --phred-offset 33
-    $PYTHON $SPLIT_FASTG -g $assembly_fastg -o $assembly_fasta
 fi
+$PYTHON $SPLIT_FASTG -g $assembly_fastg -o $assembly_fasta
 echo "$(print_time) Step 2, assembly done"
 echo "$(print_time) Step 2, start align..."
 $SAMTOOLS faidx $assembly_fasta
@@ -95,7 +94,8 @@ echo "$(print_time) Step 3, search protein done"
 echo "$(print_time) Step 3, searching contigs..."
 # deep_learning
 if [ ! -s "$node_score" ]; then
-    $PYTHON $PHAGE_SCORING $assembly_fasta $node_score True $threads $GCN_MODEL
+        echo "$PYTHON $PHAGE_SCORING $assembly_fasta $node_score True $threads $gcn_model"
+    $PYTHON $PHAGE_SCORING $assembly_fasta $node_score True $threads $gcn_model
 fi
 echo "$(print_time) Step 3, search contigs done"
 echo "$(print_time) Step 3, searching reference..."
@@ -105,6 +105,7 @@ fi
 if [ ! -f "$phage_refs" ]; then
     $PYTHON $GET_REF_BY_INDEX $phagedb $phagedb.fai $out_dir/03-search/${prefix}_ref_names.txt $phage_refs
 fi
+echo "$(print_time) Step 3, searching done"
 echo "$(print_time) Finished Step 3"
 
 ###############################Step 4, constract graph and matching cycles###############################
@@ -131,7 +132,7 @@ if [ ! -f "$out_dir/04-match/${prefix}_unfiltered.fasta" ];then
     $PYTHON $MAKE_FA_FROM_PATH $assembly_fasta $out_dir/04-match/${prefix}_all_result.txt $out_dir/04-match/${prefix}_unfiltered.fasta 0
 fi
 if [ ! -f "$out_dir/04-match/${prefix}_unfiltered_phagescore.txt" ];then
-    $PYTHON $PHAGE_SCORING $out_dir/04-match/${prefix}_unfiltered.fasta $out_dir/04-match/${prefix}_unfiltered_phagescore.txt False $threads $GCN_MODEL
+    $PYTHON $PHAGE_SCORING $out_dir/04-match/${prefix}_unfiltered.fasta $out_dir/04-match/${prefix}_unfiltered_phagescore.txt False $threads $gcn_model
 fi
 if [ ! -f "$out_dir/04-match/${prefix}_filtered.fasta" ];then
     $PYTHON $FILTER_RESULT $assembly_fasta $out_dir/04-match/${prefix}_all_result.txt $out_dir/04-match/${prefix}_filtered.fasta $assembly_fasta.blast 0.75 $hit_out $out_dir/04-match/${prefix}_unfiltered_phagescore.txt $out_dir/04-match/${prefix}_filtered_cycle.txt
@@ -148,13 +149,8 @@ echo "Starting Step 5, furth assemblying..."
 $PYTHON $FILTER_BY_BLAST $out_dir/04-match/${prefix}_filtered.fasta.blast $out_dir/04-match/${prefix}_filtered_cycle.txt $assembly_fasta.fai $out_dir/05-furth/need_second_match.txt 0 0.7 2000 > $out_dir/04-match/${prefix}_tmp_cycle.txt
 contig_names=$(cut -f 2 $out_dir/05-furth/need_second_match.txt | tr '\n' ' ')
 $SAMTOOLS faidx ${phage_refs} ${contig_names} > $out_dir/05-furth/need_second.fasta
-if [ ! -f "$out_dir/05-furth/need_second.fasta.blast" ];then
-	$NCBI_BIN/blastn -query $out_dir/05-furth/need_second.fasta -out $out_dir/05-furth/need_second.fasta.blast -db $phage_refs -outfmt "6 qaccver saccver pident qlen slen length mismatch gapopen qstart qend sstart send evalue bitscore"
-fi
-## extract graph from bam
 #sub_depth=`$SAMTOOLS depth ${first_bam} ${contig_names} |  awk '{sum+=$3} END { print sum/NR}'` #$10
-$PYTHON $EXTRACT_BY_REF $out_dir/04-match/${prefix}_graph.txt $out_dir/05-furth/second_match/$prefix $out_dir/05-furth/need_second_match.txt ${SAMTOOLS} 5 ${first_bam} $out_dir/05-furth/need_second.fasta.blast 0.7 $out_dir/05-furth/second_match
-
+$PYTHON $EXTRACT_BY_REF $out_dir/04-match/${prefix}_graph.txt $out_dir/05-furth/second_match/$prefix $out_dir/05-furth/need_second_match.txt ${SAMTOOLS} 5 ${first_bam} 0.7
 # $PYTHON $recon $assembly_fastg.fai $out_dir/${prefix}_ass_blast.txt $prefix $out_dir/need_second_match.txt $depth
 echo "recon done, Start Second Matching\n"
 
@@ -162,7 +158,7 @@ echo "recon done, Start Second Matching\n"
 for i in `ls $out_dir/05-furth/second_match/*.second`; do
     fullname=$i
     second=$(echo $fullname | sed 's/\.[^.]*$//');
-    $MATCHING -g $fullname -r ${second}_linear.txt -c ${second}_cycle.txt -i 10 -v 1;
+    $MATCHING -g $fullname -r ${second}_linear.txt -c ${second}_cycle.txt -i 10 -v 1 -b;
     if [ $? -eq 124 ]
     then
         echo "The command was terminated because it ran for more than 30 minutes."
@@ -177,7 +173,7 @@ echo "$(print_time) Finished Step 5"
 ###############################Step 6, make final result###############################
 create_dir $out_dir/final_result
 $PYTHON $FILTER_CYCLE $out_dir/04-match/${prefix}_filtered_cycle.txt 1 > $out_dir/final_result/filtered_cycle_res_tmp.txt
-if [ -f "$out_dir/filtered_cycle_res_tmp.txt" ]; then
+if [ -f "$out_dir/final_result/filtered_cycle_res_tmp.txt" ]; then
     cat $out_dir/final_result/filtered_cycle_res_tmp.txt > $out_dir/final_result/${prefix}_final_tmp.txt
 fi
 
