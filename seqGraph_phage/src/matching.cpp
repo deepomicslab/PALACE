@@ -863,6 +863,13 @@ void matching::breakAndMergeCycle(std::map<int,std::vector<int>*> *result) {
     if (this->cyclePaths.empty()) return;
     std::vector<std::pair<int, std::vector<int>*>> A;
     sort(*result,A);
+    std::sort(this->cyclePaths.begin(), this->cyclePaths.end());
+
+    // Step 2: Use std::unique to remove duplicate elements
+    auto end_unique = std::unique(this->cyclePaths.begin(), this->cyclePaths.end());
+
+    // Step 3: Erase the "extra" elements
+    this->cyclePaths.erase(end_unique, this->cyclePaths.end());
     for (auto item: this->cyclePaths) {
         auto v1 = idx2VertexInCurrentGraph(item);
         auto cPath = (*result)[item];
