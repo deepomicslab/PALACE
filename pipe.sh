@@ -166,7 +166,7 @@ for i in `ls $out_dir/05-furth/second_match/*.second`; do
     echo $second" second match"
     $PYTHON $MAKE_FA_FROM_PATH $assembly_fasta ${second}_linear.txt ${second}_unfiltered.fasta 1;
     blastn -query ${second}_unfiltered.fasta -out ${second}_unfiltered.fasta.blast -db $phage_refs -outfmt "6 qaccver saccver pident qlen slen length mismatch gapopen qstart qend sstart send evalue bitscore" ;
-    $PYTHON $FILTER_BY_BLAST ${second}_unfiltered.fasta.blast ${second}_cycle.txt $assembly_fasta.fai ${second}_tmp.txt 0 0.7 2000 ${second}> ${second}_all_result.txt
+    $PYTHON $FILTER_BY_BLAST ${second}_unfiltered.fasta.blast ${second}_cycle.txt $assembly_fasta.fai ${second}_tmp.txt 0 0.7 2000 -s ${second} > ${second}_all_result.txt
 done
 echo "$(print_time) Finished Step 5"
 
