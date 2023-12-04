@@ -37,6 +37,9 @@ private:
 public:
     explicit matching(seqGraph::Graph* graph1);
     ~matching();
+    inline std::vector<int> getCyclePaths() const {
+        return cyclePaths;
+    }
 
     void printM(int i);
     inline int* getMatched() const {

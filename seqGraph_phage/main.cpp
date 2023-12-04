@@ -168,7 +168,10 @@ int main(int argc, char *argv[]) {
     std::string graphF = result["graph"].as<std::string>();
     std::string resultF = result["result"].as<std::string>();
     std::string resultCF = result["result_c"].as<std::string>();
-        int iterRounds = result["iteration"].as<int>();
+    int iterRounds = result["iteration"].as<int>();
+    if(iterRounds > 0) {
+        BREAK_C = true;
+    }
     VERBOSE = result["verbose"].as<int>();
     // MODEL = result["model"].as<int>();
     MODEL = 1;
@@ -476,7 +479,11 @@ int main(int argc, char *argv[]) {
 
 
                }
-
+            }
+        }
+        if (BREAK_C){
+            for (auto i : m->getCyclePaths()) {
+                paths->erase(i);
             }
         }
 
