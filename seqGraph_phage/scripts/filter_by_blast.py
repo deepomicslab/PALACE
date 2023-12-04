@@ -5,7 +5,35 @@ import matplotlib.patches as patches
 import re
 from collections import defaultdict
 import os
+def determine_strand_for_pair(file_path, query_of_interest, reference_of_interest):
+    strand_lengths = defaultdict(int)
+    with open(file_path, 'r') as file:
+        for line in file:
+            tokens = line.split()
+            query, reference, qstart, qend, sstart, send = tokens[0], tokens[1], int(tokens[8]), int(tokens[9]), int(tokens[10]), int(tokens[11])
+            if query == query_of_interest and reference == reference_of_interest:
+                alignment_length = abs(qend - qstart) + 1
+                if sstart < send:
+                    strand_lengths['+'] += alignment_length
+                else:
+                    strand_lengths['-'] += alignment_length
 
+    if strand_lengths['+'] > strand_lengths['-']:
+        return '+'
+    else:
+        return '-'
+def conver_minus_strand2_plus(query_name,cut_pos):
+    start_query = re.split(r'(\+|-)',query_name)
+    start_query = [start_query[n] + start_query[n + 1] for n in range(0, len(start_query) - 1, 2)]
+    total_len = get_line_len(query_name, fai_len)
+    results_query = ""
+    for item in reversed(start_query):
+        if item[-1] == "-":
+            new_item = item[:-1] + "+"
+        else:
+            new_item = item[:-1] + "-"
+        results_query += new_item
+    return results_query,total_len - cut_pos
 def cut_end_contig(input_blast, fai_len):
     ref_query_dict = defaultdict(lambda: {
         "min_start": float('inf'), "min_start_query": "",
@@ -25,40 +53,52 @@ def cut_end_contig(input_blast, fai_len):
             qstart = min(int(parts[8]),int(parts[9]))
             qend = max(int(parts[9]),int(parts[8]))
 
-            if sstart < ref_query_dict[reference]["min_start"] or ref_query_dict[reference]["min_start_query"] == query:
-                if ref_query_dict[reference]["min_start_query"] != query:
-                    ref_query_dict[reference]["min_start"] = sstart
-                    ref_query_dict[reference]["min_start_query"] = query
+        if sstart < ref_query_dict[reference]["min_start"] or ref_query_dict[reference]["min_start_query"] == query:
+            if ref_query_dict[reference]["min_start_query"] != query:
+                ref_query_dict[reference]["min_start"] = sstart
+                ref_query_dict[reference]["min_start_query"] = query
+                ref_query_dict[reference]["min_start_query_start"] = qstart
+                ref_query_dict[reference]["min_start_query_end"] = qend
+            else:
+                ref_query_dict[reference]["min_start"] = sstart
+                if ref_query_dict[reference]["min_start_query_start"] > qstart:
                     ref_query_dict[reference]["min_start_query_start"] = qstart
+                if ref_query_dict[reference]["min_start_query_end"] < qend:
                     ref_query_dict[reference]["min_start_query_end"] = qend
-                else:
-                    ref_query_dict[reference]["min_start"] = sstart
-                    if ref_query_dict[reference]["min_start_query_start"] > qstart:
-                        ref_query_dict[reference]["min_start_query_start"] = qstart
 
-            #print(send,qend,ref_query_dict[reference]["max_end_query"] != query, query,"xxxxx",ref_query_dict[reference]["max_end"])
-            if send > ref_query_dict[reference]["max_end"] or ref_query_dict[reference]["max_end_query"] == query:
-                if ref_query_dict[reference]["max_end_query"] != query:
-                    ref_query_dict[reference]["max_end"] = send
-                    ref_query_dict[reference]["max_end_query"] = query
-                    ref_query_dict[reference]["max_end_query_start"] = qstart
+        #print(send,qend,ref_query_dict[reference]["max_end_query"] != query, query,"xxxxx",ref_query_dict[reference]["max_end"])
+        if send > ref_query_dict[reference]["max_end"] or ref_query_dict[reference]["max_end_query"] == query:
+            if ref_query_dict[reference]["max_end_query"] != query:
+                ref_query_dict[reference]["max_end"] = send
+                ref_query_dict[reference]["max_end_query"] = query
+                ref_query_dict[reference]["max_end_query_start"] = qstart
+                ref_query_dict[reference]["max_end_query_end"] = qend
+            else:
+                ref_query_dict[reference]["max_end"] = send
+                if ref_query_dict[reference]["max_end_query_end"] < qend:
                     ref_query_dict[reference]["max_end_query_end"] = qend
-                else:
-                    ref_query_dict[reference]["max_end"] = send
-                    if ref_query_dict[reference]["max_end_query_end"] < qend:
-                        ref_query_dict[reference]["max_end_query_end"] = qend
+                if ref_query_dict[reference]["max_end_query_start"] > qstart:
+                    ref_query_dict[reference]["max_end_query_start"] = qstart
     # For each reference print the query split by start and end
     # cut by blast
     ref_start_end_segs={}
     for ref, data in ref_query_dict.items():
+        strand = determine_strand_for_pair(sys.argv[1], data["min_start_query"],ref)
+        if strand == "-":
+            data["min_start_query"],data["min_start_query_start"] = conver_minus_strand2_plus(data["min_start_query"], data["min_start_query_end"])
+        # print(strand, data["min_start_query"], data["min_start_query_start"])
         start_query = re.split(r'(\+|-)',data["min_start_query"])
         start_query = [start_query[n] + start_query[n + 1] for n in range(0, len(start_query) - 1, 2)]
         start_query_start = data["min_start_query_start"]
-        start_query_end = data["min_start_query_end"]
+        #start_query_end = data["min_start_query_end"]
 
+        strand = determine_strand_for_pair(sys.argv[1], data["max_end_query"],ref)
+        if strand == "-":
+            data["max_end_query"],data["max_end_query_end"] =conver_minus_strand2_plus(data["max_end_query"], data["max_end_query_start"])
+        # print(strand, data["max_end_query"], data["max_end_query_end"])
         end_query = re.split('(\+|-)', data["max_end_query"])
         end_query = [end_query[n] + end_query[n + 1] for n in range(0, len(end_query) - 1, 2)]
-        end_query_start = data["max_end_query_start"]
+        #end_query_start = data["max_end_query_start"]
         end_query_end = data["max_end_query_end"]
 
         start_query_filtered = []
