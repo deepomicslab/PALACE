@@ -870,6 +870,7 @@ void matching::breakAndMergeCycle(std::map<int,std::vector<int>*> *result) {
 
     // Step 3: Erase the "extra" elements
     this->cyclePaths.erase(end_unique, this->cyclePaths.end());
+    std::vector<int> to_remove;
     for (auto item: this->cyclePaths) {
         auto v1 = idx2VertexInCurrentGraph(item);
         auto cPath = (*result)[item];
@@ -884,10 +885,19 @@ void matching::breakAndMergeCycle(std::map<int,std::vector<int>*> *result) {
                     auto pos = p.second->begin() + i;
                     p.second->insert(pos, cPath->begin(), cPath->end());
                     hit = true;
+                    to_remove.push_back(item);
                     break;
                 }
             }
             if (hit) break;
+        }
+    }
+    if (BREAK_C) {
+        for (auto i : to_remove) {
+            result->erase(i);
+            auto it = std::find(this->cyclePaths.begin(), this->cyclePaths.end(), i);
+            if (it != this->cyclePaths.end())
+                this->cyclePaths.erase(it);
         }
     }
 }
@@ -898,10 +908,10 @@ void matching::breakResolvedPaths(std::vector<int> *cur, std::deque<int> & zereB
         bool isNoCopyCycle = true;
         auto cSize = cur->size();
         for (int i = 0; i < cSize;i++){
-            if (this->idx2VertexInOriginalGraph((*cur)[i])->getWeight()->getCopyNum() >= 2) {
+            if (this->idx2VertexInOriginalGraph((*cur)[0])->getWeight()->getCopyNum() >= 2) {
                 isNoCopyCycle = false;
-                this->cyclePaths.push_back((*cur)[i]);
-                result->emplace((*cur)[i], cur);
+//                this->cyclePaths.push_back((*cur)[i]);
+//                result->emplace((*cur)[i], cur);
                 break;
             }
             cur->push_back(cur->front());
