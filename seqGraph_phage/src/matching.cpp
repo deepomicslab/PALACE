@@ -875,7 +875,7 @@ void matching::breakAndMergeCycle(std::map<int,std::vector<int>*> *result) {
         auto v1 = idx2VertexInCurrentGraph(item);
         auto cPath = (*result)[item];
         for (auto& p : *result) {
-            if (p.first == item) continue;
+            if (p.first == item or std::find(to_remove.begin(), to_remove.end(),p.first) != to_remove.end()) continue;
             bool hit = false;
             for (int i = 0 ; i < p.second->size(); i++) {
                 auto idx = (*p.second)[i];
