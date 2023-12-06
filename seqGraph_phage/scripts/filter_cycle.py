@@ -5,6 +5,8 @@ res = set()
 ignore_len = int(sys.argv[2])
 with open(sys.argv[1]) as r:
     for line in r.readlines():
+        if "loop" in line or "iter" in line:
+            continue
         line_len = 0
         splited=re.split(r'[+-]',line.strip())
         for v in splited:
@@ -17,7 +19,8 @@ with open(sys.argv[1]) as r:
             liner = line.replace("cycle","").replace("score","").replace("self","").replace("gene","").replace("ref","")
             res.add(liner.strip("\n"))
         else:
-            liner = line.replace("cycle","").replace("score","").replace("self","").replace("gene","").replace("ref","")
-            res.add(liner.strip("\n"))
+            pass
+            #liner = line.replace("cycle","").replace("score","").replace("self","").replace("gene","").replace("ref","")
+            #res.add(liner.strip("\n"))
 for item in res:
     print(item.replace("+","+\t").replace("-","-\t"))

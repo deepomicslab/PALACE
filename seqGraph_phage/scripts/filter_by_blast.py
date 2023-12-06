@@ -22,7 +22,7 @@ def determine_strand_for_pair(file_path, query_of_interest, reference_of_interes
         return '+'
     else:
         return '-'
-def conver_minus_strand2_plus(query_name,cut_pos):
+def conver_minus_strand2_plus(query_name,cut_pos,fai_len):
     start_query = re.split(r'(\+|-)',query_name)
     start_query = [start_query[n] + start_query[n + 1] for n in range(0, len(start_query) - 1, 2)]
     total_len = get_line_len(query_name, fai_len)
@@ -34,7 +34,7 @@ def conver_minus_strand2_plus(query_name,cut_pos):
             new_item = item[:-1] + "-"
         results_query += new_item
     return results_query,total_len - cut_pos
-def cut_end_contig(input_blast, fai_len):
+def cut_end_contig(input_blast, blast_segs, fai_len,ref, ref_aligned_threshold):
     ref_query_dict = defaultdict(lambda: {
         "min_start": float('inf'), "min_start_query": "",
         "max_end": float('-inf'), "max_end_query": "",
@@ -47,54 +47,64 @@ def cut_end_contig(input_blast, fai_len):
         for line in lines:
             parts = line.strip().split("\t")
             query = parts[0]
+            if query not in blast_segs:
+                continue
+            if query not in blast_segs:
+                continue
             reference = parts[1]
+            if reference not in ref:
+                continue
             sstart = min(int(parts[10]),int(parts[11]))
             send = max(int(parts[11]),int(parts[10]))
             qstart = min(int(parts[8]),int(parts[9]))
             qend = max(int(parts[9]),int(parts[8]))
+            ref_len = int(parts[4])
 
-        if sstart < ref_query_dict[reference]["min_start"] or ref_query_dict[reference]["min_start_query"] == query:
-            if ref_query_dict[reference]["min_start_query"] != query:
-                ref_query_dict[reference]["min_start"] = sstart
-                ref_query_dict[reference]["min_start_query"] = query
-                ref_query_dict[reference]["min_start_query_start"] = qstart
-                ref_query_dict[reference]["min_start_query_end"] = qend
-            else:
-                ref_query_dict[reference]["min_start"] = sstart
-                if ref_query_dict[reference]["min_start_query_start"] > qstart:
+            #print(sstart, ref_query_dict[reference]["min_start"])
+
+            if sstart < ref_aligned_threshold and sstart < ref_query_dict[reference]["min_start"] or ref_query_dict[reference]["min_start_query"] == query:
+                if ref_query_dict[reference]["min_start_query"] != query:
+                    ref_query_dict[reference]["min_start"] = sstart
+                    ref_query_dict[reference]["min_start_query"] = query
                     ref_query_dict[reference]["min_start_query_start"] = qstart
-                if ref_query_dict[reference]["min_start_query_end"] < qend:
                     ref_query_dict[reference]["min_start_query_end"] = qend
+                else:
+                    ref_query_dict[reference]["min_start"] = sstart
+                    if ref_query_dict[reference]["min_start_query_start"] > qstart:
+                        ref_query_dict[reference]["min_start_query_start"] = qstart
+                    if ref_query_dict[reference]["min_start_query_end"] < qend:
+                        ref_query_dict[reference]["min_start_query_end"] = qend
 
-        #print(send,qend,ref_query_dict[reference]["max_end_query"] != query, query,"xxxxx",ref_query_dict[reference]["max_end"])
-        if send > ref_query_dict[reference]["max_end"] or ref_query_dict[reference]["max_end_query"] == query:
-            if ref_query_dict[reference]["max_end_query"] != query:
-                ref_query_dict[reference]["max_end"] = send
-                ref_query_dict[reference]["max_end_query"] = query
-                ref_query_dict[reference]["max_end_query_start"] = qstart
-                ref_query_dict[reference]["max_end_query_end"] = qend
-            else:
-                ref_query_dict[reference]["max_end"] = send
-                if ref_query_dict[reference]["max_end_query_end"] < qend:
-                    ref_query_dict[reference]["max_end_query_end"] = qend
-                if ref_query_dict[reference]["max_end_query_start"] > qstart:
+            if send > ref_len - ref_aligned_threshold and send > ref_query_dict[reference]["max_end"] or ref_query_dict[reference]["max_end_query"] == query:
+                if ref_query_dict[reference]["max_end_query"] != query:
+                    ref_query_dict[reference]["max_end"] = send
+                    ref_query_dict[reference]["max_end_query"] = query
                     ref_query_dict[reference]["max_end_query_start"] = qstart
+                    ref_query_dict[reference]["max_end_query_end"] = qend
+                else:
+                    ref_query_dict[reference]["max_end"] = send
+                    if ref_query_dict[reference]["max_end_query_end"] < qend:
+                        ref_query_dict[reference]["max_end_query_end"] = qend
+                    if ref_query_dict[reference]["max_end_query_start"] > qstart:
+                        ref_query_dict[reference]["max_end_query_start"] = qstart
     # For each reference print the query split by start and end
     # cut by blast
     ref_start_end_segs={}
     for ref, data in ref_query_dict.items():
-        strand = determine_strand_for_pair(sys.argv[1], data["min_start_query"],ref)
+        strand = determine_strand_for_pair(input_blast, data["min_start_query"],ref)
+        original_min_start_query = data["min_start_query"]
         if strand == "-":
-            data["min_start_query"],data["min_start_query_start"] = conver_minus_strand2_plus(data["min_start_query"], data["min_start_query_end"])
-        # print(strand, data["min_start_query"], data["min_start_query_start"])
+            data["min_start_query"],data["min_start_query_start"] = conver_minus_strand2_plus(data["min_start_query"], data["min_start_query_end"],fai_len)
+        #print("start",strand, data["min_start_query"], data["min_start_query_start"])
         start_query = re.split(r'(\+|-)',data["min_start_query"])
         start_query = [start_query[n] + start_query[n + 1] for n in range(0, len(start_query) - 1, 2)]
         start_query_start = data["min_start_query_start"]
         #start_query_end = data["min_start_query_end"]
 
-        strand = determine_strand_for_pair(sys.argv[1], data["max_end_query"],ref)
+        strand = determine_strand_for_pair(input_blast, data["max_end_query"],ref)
+        original_max_end_query = data["max_end_query"]
         if strand == "-":
-            data["max_end_query"],data["max_end_query_end"] =conver_minus_strand2_plus(data["max_end_query"], data["max_end_query_start"])
+            data["max_end_query"],data["max_end_query_end"] =conver_minus_strand2_plus(data["max_end_query"], data["max_end_query_start"],fai_len)
         # print(strand, data["max_end_query"], data["max_end_query_end"])
         end_query = re.split('(\+|-)', data["max_end_query"])
         end_query = [end_query[n] + end_query[n + 1] for n in range(0, len(end_query) - 1, 2)]
@@ -122,23 +132,27 @@ def cut_end_contig(input_blast, fai_len):
         if data["min_start_query"] == data["max_end_query"]:
             intersection_list = [value for value in end_query_filtered if value in start_query_filtered]
             ref_start_end_segs[data["min_start_query"]]=intersection_list
+            ref_start_end_segs[original_min_start_query] = intersection_list
         else:
             ref_start_end_segs[data["min_start_query"]]=start_query_filtered
+            ref_start_end_segs[original_min_start_query] = start_query_filtered
             ref_start_end_segs[data["max_end_query"]] = end_query_filtered
-    return ref_start_end_segs
+            ref_start_end_segs[original_max_end_query] = end_query_filtered
         #print(f"Reference: {ref}")
         #print(f"Start Query: {start_query_filtered} {start_query_start}")
         #print(f"End Query: {end_query_filtered} {end_query_end}")
+    return ref_start_end_segs
 def get_seg_len(seg, fai_len):
-    seg_p = seg.replace("+","").replace("-","")
+    seg_p = seg.replace("+","").replace("-","").replace("\t","")
     return fai_len[seg_p]
 
 def get_line_len(line, fai_len):
     result_len = 0
-    vs = re.split(r'[+-]',line)
+    vs = re.split(r'\+|-|\t',line)
     for v in vs:
         if v != "":
             result_len += get_seg_len(v, fai_len)
+    #print(vs,line,"wewewe",result_len)
     return result_len
 def main():
     parser = argparse.ArgumentParser(description="Filter by BLAST")
@@ -152,6 +166,8 @@ def main():
     parser.add_argument("-s", "--single_ref", help="Single reference", default="")
     parser.add_argument("--gene_hit", help="Gene hit")
     parser.add_argument("--score", help="Score")
+    parser.add_argument("--before_cut", help="contains info before cut(used for filter)")
+    parser.add_argument("--ref_aligned_threshold", help="Threshold for start or end alignment", type=int, default=100)
     args = parser.parse_args()
     input_file = args.input_file
     cycle_txt = args.cycle_txt
@@ -188,7 +204,6 @@ def main():
                 if line_len >= 10000:
                     liner = line.replace("cycle","").replace("score","").replace("self","").replace("gene","")
                     res.add(liner.strip("\n"))
-    ref_start_end_segs = cut_end_contig(args.input_file, fai_len)
 # 生成需要第二步match的文件： format: res \t ref
 
     title_contig = {}
@@ -210,6 +225,7 @@ def main():
                 elen = get_line_len(prev_seg, fai_len)
                 if float(prev_len) / float(elen) > blast_ratio or prev_len > blast_len_threshold:
                 #if float(prev_len) / float(elen) > blast_ratio:
+                    #print(prev_seg, prev_len,elen,float(prev_len) / float(elen),blast_ratio,blast_len_threshold, "111111111")
                     blast_segs.add(prev_seg)
                 prev_seg = t[0]
                 prev_ref = t[1]
@@ -225,7 +241,9 @@ def main():
     if elen != 0:
         if float(prev_len) / float(elen) > blast_ratio or prev_len > blast_len_threshold:
         #if float(prev_len) / float(elen) > blast_ratio:
+            #print(prev_seg, prev_len,elen,"22222222")
             blast_segs.add(t[0])
+    ref_start_end_segs = cut_end_contig(args.input_file,blast_segs, fai_len,args.single_ref, args.ref_aligned_threshold)
     for fline in open(args.input_file).readlines():
         # ref_length = ref_list[ref]
         contig_num = 10
@@ -297,7 +315,7 @@ def main():
                 continue
         pt = ""
         for i in title_contig[ref]:
-            pt = pt + i
+            pt = pt +"\t"+ i
         if pt in contig_ref.keys():
             contig_ref[pt].append(ref)
         else:
@@ -381,7 +399,6 @@ def main():
     # print(count)
     # # print(tmp)
     # print(len(contig_ref))
-    # print(result)
     for s in similar_array:
         max_v = 0
         max_it = ""
@@ -449,15 +466,23 @@ def main():
                 k2 = k
             if k2 not in visited_path:
                 path = k2.replace("gene_score", "").replace("score", "").replace("gene", "").replace("self", "").replace("self-gene",                                                                                          "").replace("ref","")
-                second_match.write(path + '\t' + ref + '\n')
+                second_match.write(path.replace("\t","") + '\t' + ref + '\n')
                 res.add(path.strip("\n"))
                 plt.savefig(os.path.join(os.path.dirname(args.input_file), "N" + k2[0:15] + "_" + k2[-15:-1] + "%s_blast.png" % ref), dpi=300)
             visited_path.append(k2)
             plt.close()
-    for item in res:
-        if item in ref_start_end_segs.keys():
-            item = "".join(ref_start_end_segs[item])
-        print(item.replace("+","+\t").replace("-","-\t"))
+    
+    if args.before_cut:
+        with open(args.before_cut,"w") as bc_fout:
+            for item in res:
+                new_item = ""
+                for seg in item.strip().split("\t"):
+                    if seg in ref_start_end_segs.keys():
+                        seg = "".join(ref_start_end_segs[seg])
+                    new_item += seg
+                new_item_str=new_item.replace("\t","").replace("+","+\t").replace("-","-\t")
+                print(new_item_str.strip())
+                bc_fout.write(new_item_str+":"+item.replace("\t","").replace("+","+\t").replace("-","-\t")+"\n")
     second_match.close()
 
 if __name__ == "__main__":
