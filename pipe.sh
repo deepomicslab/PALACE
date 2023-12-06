@@ -152,8 +152,8 @@ $SAMTOOLS faidx ${phage_refs} ${contig_names} > $out_dir/05-furth/need_second.fa
 #sub_depth=`$SAMTOOLS depth ${first_bam} ${contig_names} |  awk '{sum+=$3} END { print sum/NR}'` #$10
 $PYTHON $EXTRACT_BY_REF $out_dir/04-match/${prefix}_graph.txt $out_dir/05-furth/second_match/$prefix $out_dir/05-furth/need_second_match.txt ${SAMTOOLS} 5 ${first_bam} 0.7
 # $PYTHON $recon $assembly_fastg.fai $out_dir/${prefix}_ass_blast.txt $prefix $out_dir/need_second_match.txt $depth
-echo "recon done, Start Second Matching\n"
 
+echo "recon done, Start Second Matching\n"
 # iteraction: deal the each  ${name}_{refname}.txt
 for i in `ls $out_dir/05-furth/second_match/*.second`; do
     fullname=$i
@@ -164,15 +164,17 @@ for i in `ls $out_dir/05-furth/second_match/*.second`; do
         echo "The command was terminated because it ran for more than 30 minutes."
     fi
     echo $second" second match"
-    $PYTHON $MAKE_FA_FROM_PATH $assembly_fasta ${second}_linear.txt ${second}_unfiltered.fasta 1;
+    cat ${second}_linear.txt  ${second}_cycle.txt > ${second}_result_cycle.txt
+    $PYTHON $MAKE_FA_FROM_PATH $assembly_fasta ${second}_result_cycle.txt ${second}_unfiltered.fasta 1;
     blastn -query ${second}_unfiltered.fasta -out ${second}_unfiltered.fasta.blast -db $phage_refs -outfmt "6 qaccver saccver pident qlen slen length mismatch gapopen qstart qend sstart send evalue bitscore" ;
-    $PYTHON $FILTER_BY_BLAST ${second}_unfiltered.fasta.blast ${second}_cycle.txt $assembly_fasta.fai ${second}_tmp.txt 0 0.7 2000 -s ${second} > ${second}_all_result.txt
+    $PYTHON $FILTER_BY_BLAST ${second}_unfiltered.fasta.blast $out_dir/04-match/${prefix}_cycle.txt $assembly_fasta.fai ${second}_tmp.txt 0 0.7 2000 -s ${second} --before_cut ${second}_all_result_before_cut.txt > ${second}_all_result.txt
 done
 echo "$(print_time) Finished Step 5"
 
-###############################Step 6, make final result###############################
+################################Step 6, make final result###############################
 create_dir $out_dir/final_result
-$PYTHON $FILTER_CYCLE $out_dir/04-match/${prefix}_filtered_cycle.txt 1 > $out_dir/final_result/filtered_cycle_res_tmp.txt
+$PYTHON $FILTER_CYCLE $out_dir/04-match/${prefix}_filtered_cycle.txt 0 > $out_dir/final_result/filtered_cycle_res_tmp.txt
+rm $out_dir/final_result/${prefix}_final_tmp.txt
 if [ -f "$out_dir/final_result/filtered_cycle_res_tmp.txt" ]; then
     cat $out_dir/final_result/filtered_cycle_res_tmp.txt > $out_dir/final_result/${prefix}_final_tmp.txt
 fi
@@ -180,11 +182,15 @@ fi
 if [ "$(ls -A $out_dir/05-furth/second_match/*_all_result.txt 2>/dev/null)" ]; then
     cat $out_dir/05-furth/second_match/*_all_result.txt >> $out_dir/final_result/${prefix}_final_tmp.txt
 fi
-
-if [ "$(ls -A $out_dir/05-furth/second_match/*cycle.txt 2>/dev/null)" ]; then
-    cat $out_dir/05-furth/second_match/*cycle.txt | grep -v 'iter' >> $out_dir/final_result/${prefix}_final_tmp.txt
+if [ "$(ls -A $out_dir/05-furth/second_match/*_all_result_before_cut.txt 2>/dev/null)" ]; then
+    cat $out_dir/05-furth/second_match/*_all_result_before_cut.txt > $out_dir/final_result/${prefix}_all_before_cut.txt
 fi
 
-$PYTHON $MAKE_FINAL_FA $assembly_fasta $out_dir/final_result/${prefix}_final_tmp.txt $out_dir/final_result/${prefix}_final_tmp.fasta $prefix
-$PYTHON $CORRECTED_DUP $out_dir/final_result ${prefix} $out_dir/final_result/filtered_cycle_res_tmp.txt $out_dir/final_result/${prefix}_final_tmp.txt ${prefix}_final.txt ${prefix}_final.fasta $assembly_fasta ${prefix}_cycle.txt $first_bam
+#if [ "$(ls -A $out_dir/05-furth/second_match/*cycle.txt 2>/dev/null)" ]; then
+#    cat $out_dir/05-furth/second_match/*cycle.txt | grep -v 'iter' | grep -v 'loop' >> $out_dir/final_result/${prefix}_final_tmp.txt
+#fi
+$PYTHON $FILTER_CYCLE  $out_dir/final_result/${prefix}_final_tmp.txt 0 >  $out_dir/final_result/${prefix}_filtered_final_tmp.txt
+
+$PYTHON $MAKE_FINAL_FA $assembly_fasta $out_dir/final_result/${prefix}_filtered_final_tmp.txt $out_dir/final_result/${prefix}_final_tmp.fasta $prefix
+$PYTHON $CORRECTED_DUP $out_dir/final_result ${prefix} $out_dir/final_result/filtered_cycle_res_tmp.txt $out_dir/final_result/${prefix}_filtered_final_tmp.txt ${prefix}_final.txt ${prefix}_final.fasta $assembly_fasta ${prefix}_cycle.txt $first_bam $out_dir/final_result/${prefix}_all_before_cut.txt
 echo "all done"
