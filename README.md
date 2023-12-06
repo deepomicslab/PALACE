@@ -25,6 +25,7 @@ conda activate ./PALACE
 cd seqgraph_phage/
 cd build
 make
+chmod u+x ./matching
 cd scripts/
 python setup.py build_ext --inplace
 ```
@@ -64,6 +65,7 @@ mamba activate palace ## or conda activate palace
 cd ./PALACE/seqGraph_phage/
 cd build
 make
+chmod u+x ./matching
 cd scripts/
 python setup.py build_ext --inplace
 ```
