@@ -23,9 +23,7 @@ conda activate ./PALACE
 
 ```
 cd seqgraph_phage/
-mkdir build
 cd build
-cmake ..
 make
 cd scripts/
 python setup.py build_ext --inplace
@@ -64,9 +62,7 @@ git clone https://github.com/deepomicslab/PALACE
 mamba create -n palace ## or conda create -n palace
 mamba activate palace ## or conda activate palace
 cd ./PALACE/seqGraph_phage/
-mkdir build
 cd build
-cmake ..
 make
 cd scripts/
 python setup.py build_ext --inplace
