@@ -13,7 +13,7 @@ n_seq = Seq("N" * 10)
 
 count = 0
 for line in orderin.readlines():
-    if "all" in line or "iter" in line or "loop" in line:
+    if "all" in line:
         continue
     seq = ""
     tmp = re.split("\t+", line.strip("\n"))
