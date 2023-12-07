@@ -22,7 +22,7 @@ conda activate ./PALACE
 3. Create a build directory and compile PALACE under it (use **sudo**, if required):
 
 ```
-cd seqgraph_phage/
+cd seqGraph_phage/
 cd build
 make
 chmod u+x ./matching
