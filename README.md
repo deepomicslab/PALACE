@@ -26,7 +26,7 @@ cd seqGraph_phage/
 cd build
 make
 chmod u+x ./matching
-cd scripts/
+cd ../scripts/
 python setup.py build_ext --inplace
 ```
 ### Approach 2, from scratch
@@ -66,7 +66,7 @@ cd ./PALACE/seqGraph_phage/
 cd build
 make
 chmod u+x ./matching
-cd scripts/
+cd ../scripts/
 python setup.py build_ext --inplace
 ```
 
