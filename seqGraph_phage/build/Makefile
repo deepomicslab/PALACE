@@ -2,20 +2,20 @@
 CC = g++
 
 # Compiler flags
-CFLAGS = -Wall -Ihtslib-1.18
+CFLAGS = -Wall
 
 # Libraries to link with
-LDFLAGS = -Lhtslib-1.18 -lhts
+LDFLAGS = -L $(shell pwd)/libhts -lhts
 
-all: htslib-1.18/libhts.a eref rDistance
+all: $(shell pwd)/libhts/lib/libhts.a eref rDistance
 
-htslib-1.18/libhts.a:
-	cd htslib-1.18 && chmod u+x ./configure && ./configure && make
+$(shell pwd)/libhts/lib/libhts.a:
+	cd htslib-1.18 && chmod u+x ./configure && ./configure prefix=$(shell pwd)/libhts && make && make install
 
-eref: extract_ref.cpp htslib-1.18/libhts.a
-	$(CC) $(CFLAGS) -o eref extract_ref.cpp $(LDFLAGS)
+eref: extract_ref.cpp $(shell pwd)/libhts/lib/libhts.a
+	$(CC) $(CFLAGS) -o eref extract_ref.cpp $(LDFLAGS) -lpthread
 
-rDistance: reads_overlap.cpp reads_overlap.h htslib-1.18/libhts.a
+rDistance: reads_overlap.cpp $(shell pwd)/libhts/lib/libhts.a
 	$(CC) $(CFLAGS) -o rDistance reads_overlap.cpp $(LDFLAGS)
 
 clean:
