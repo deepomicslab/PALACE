@@ -70,17 +70,17 @@ def calculate_average_depth(depths):
 
 def get_min_copy_seg(unit_seg, seg_copies):
     # segs = unit_seg.split()
-    #print(unit_seg, "xxxxxx")
-    #print(seg_copies, "dddddd")
     min_seg = ""
     min_copy = 10000
     for item in unit_seg:
         item = item.replace("+","").replace("-","")
-        copy = seg_copies[item]
+        if item not in seg_copies.keys():
+            copy = 1
+        else:
+            copy = seg_copies[item]
         if copy < min_copy:
             min_seg = item
             min_copy = copy
-    #print(min_seg, min_copy, "mmmmmm")
     return min_seg, min_copy
 
 def non_dup_item(ori_arr, unit_cycles):
@@ -123,7 +123,11 @@ def get_depth(all_non_dup_segs,unit_cycle_segs, non_unit_part, bam, first_item):
         if unit_copy == 0:
             unit_copy = 1
         unit_copies.append(unit_copy)
-    return unit_copies, seg_depth_dict[first_item.replace('-','').replace('+','')]
+    k = first_item.replace('-','').replace('+','')
+    return_depth=0
+    if k in seg_depth_dict.keys():
+        return_depth = seg_depth_dict[first_item.replace('-','').replace('+','')]
+    return unit_copies, return_depth
 
 
 def reformat_cycle(s):
@@ -357,6 +361,7 @@ def is_same(lst1, lst2):
 def is_similar(lst1, lst2):
     # # #print(lst1, lst2, "lst1 lst2")
     # lst1_sorted = sorted(lst1, reverse=True)
+    print(lst1,lst2)
     lst1_lens = [get_seg_len(item) for item in lst1]
 
     # lst2_sorted = sorted(lst2, reverse=True)
@@ -443,24 +448,30 @@ def remove_cycle_in_final_all(twoDcycles, line_arr):
 # kind 1: ABAB to AB
 # kind 2: record A and record B have 90% similarity. keep the longest.
 # kind 2:
-def filter_final(final_all_file, cycle_count, cycle_result, ori_cycle_result):
+def filter_final(final_all_file, cycle_count, cycle_result, ori_cycle_result, before_cut_dict):
     final_cycle_count = cycle_count
     final_all = open(final_all_file)
     line_idx = 0
     cycle_result_size = len(cycle_result)
     tmp_result = copy.deepcopy(cycle_result)
+    before_cut_dict_swap = {v:k for k, v in before_cut_dict.items()}
     for line in final_all.readlines():
         if line_idx < cycle_count:
             line_idx = line_idx + 1
+            #continue
+        line_k = line.strip().replace("\t","").replace("+","+\t").replace("-","-\t").strip()
+        if line_k in before_cut_dict.keys():
+            line_arr_tmp = re.split("\t", before_cut_dict[line_k])
+        else:
+            line_arr_tmp = re.split("\t", line_k)
+        if remove_cycle_in_final_all(ori_cycle_result, line_arr_tmp):
             continue
         line_arr = re.split(r"\s+", line.strip())
-        if remove_cycle_in_final_all(ori_cycle_result, line_arr):
-            continue
         # for item in line_arr:
         #     sub_lst.append(item)
         # line_arr = line_arr.sort()
         # kind 1: for each record, filter cycle result like : ABABABAC to ABAC
-        remove_duplicated_arr =  line_arr
+        remove_duplicated_arr = line_arr_tmp 
         tmp_result.append(remove_duplicated_arr)
         line_idx = line_idx + 1
     keeped_idx = set(range(0, len(tmp_result)))
@@ -493,7 +504,11 @@ def filter_final(final_all_file, cycle_count, cycle_result, ori_cycle_result):
         if item in cycle_result:
             final_result_cycle.append(item)
         else:
-            final_result_uncycle.append(item)
+            #print(before_cut_dict_swap.keys())
+            if "\t".join(item) in before_cut_dict_swap.keys():
+                final_result_uncycle.append(before_cut_dict_swap["\t".join(item)].split("\t"))
+            else:
+                final_result_uncycle.append(item)
     # print(cycle_result,"cc")
     # print(final_result,"bb")
     # print(final_result_cycle,"dd")
@@ -568,12 +583,18 @@ if __name__ == "__main__":
     edge_fasta = sys.argv[7]
     cycle_out_file = os.path.join(out_dir, sys.argv[8])
     bam = sys.argv[9]
+    before_cut = sys.argv[10]
     with open(edge_fasta+".fai", 'r') as f:
         for line in f:
             fields = line.strip().split('\t')
             FAI_LEN[fields[0]] = int(fields[1])
     os.makedirs(out_dir, exist_ok=True)
-
+    
+    before_cut_dict = {}
+    with open(before_cut, "r") as f:
+        for line in f:
+            key,value=line.strip().split(":")
+            before_cut_dict[key.strip()] = value.strip()
     # split edge fasta
     # prefix = get_prefix(Fasta(edge_fasta_file)) # SAMEA728574_phage_3, prefix:SAMEA728574
     # prefix = split_fasta(edge_fasta_file, final_all_file, edge_fasta)
@@ -583,7 +604,7 @@ if __name__ == "__main__":
     cycle_count, cycle_result, ori_cycle_result = filter_cycle(cycle_file, cycle_out_file,bam)
 
     # remove_dup for final.txt
-    final_cycle_count, filtered_final_results = filter_final(final_all_file, cycle_count, cycle_result, ori_cycle_result)
+    final_cycle_count, filtered_final_results = filter_final(final_all_file, cycle_count, cycle_result, ori_cycle_result, before_cut_dict)
     #print(final_cycle_count,"count")
     with open(filtered_final_all_file, "w") as filtered_final_all:
         for item in filtered_final_results:

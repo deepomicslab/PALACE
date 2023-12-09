@@ -96,9 +96,7 @@ if len(sys.argv) > 5:
 if len(sys.argv) > 6:
     bam = sys.argv[6]
 if len(sys.argv) > 7:
-    blast_in = sys.argv[7]
-if len(sys.argv) > 8:
-    blast_ratio = float(sys.argv[8])
+    blast_ratio = float(sys.argv[7])
 tmp = {}
 segs = []
 seg_g = {}
@@ -108,6 +106,7 @@ out_juncs = []
 #    a = re.split(":|,|;", vs[0])
 #    tmp[a[0]] = a[1:]
 ref_name_records = {}
+ref_segs = {}
 for idx, line in enumerate(segf):
     l = line.strip().split('\t')
     t = re.split(r"[\+\-]", l[0])[:-1]
@@ -123,6 +122,7 @@ for idx, line in enumerate(segf):
         else:
             seg_g[v] = [idx]
     segs.append(line_segs)
+    ref_segs[l[1]] = set(t)
 out_segs = [[] for i in range(0, len(out_juncs))]
 
 
@@ -191,8 +191,8 @@ for line in graph:
 i = 0
 # print(out_segs)
 # filter segs mapped to reof
-blast_stream = open(blast_in)
-ref_segs = parse_blast(blast_stream, blast_ratio, list(ref_name_records.values()))
+#blast_stream = open(blast_in)
+#ref_segs = parse_blast(blast_stream, blast_ratio, list(ref_name_records.values()))
 #for js in out_segs:
     #outs_f = open(outs + "_" + str(i) + "_" + ref_name_records[i] + ".second", "w")
     #js_c = get_depth(js,bam)
@@ -210,7 +210,7 @@ i = 0
 for idx,js in enumerate(out_juncs):
     outs_f = open(outs + "_" + str(i) + "_" + ref_name_records[i] + ".second", "w")
     current_count = len(ref_segs[ref_name_records[i]])
-    prev_ref_segs_count = 0 
+    prev_ref_segs_count = 0
     while prev_ref_segs_count != current_count:
         prev_ref_segs_count = current_count
         for j in sorted(js):
@@ -230,4 +230,3 @@ for idx,js in enumerate(out_juncs):
         outs_f.write(" ".join(j)+"\n")
     i = i + 1
     outs_f.close()
-
