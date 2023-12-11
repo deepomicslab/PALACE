@@ -34,7 +34,7 @@ def conver_minus_strand2_plus(query_name,cut_pos,fai_len):
             new_item = item[:-1] + "-"
         results_query += new_item
     return results_query,total_len - cut_pos
-def cut_end_contig(input_blast, blast_segs, fai_len,ref, ref_aligned_threshold):
+def cut_end_contig(input_blast, blast_segs, fai_len,ref):
     ref_query_dict = defaultdict(lambda: {
         "min_start": float('inf'), "min_start_query": "",
         "max_end": float('-inf'), "max_end_query": "",
@@ -58,11 +58,9 @@ def cut_end_contig(input_blast, blast_segs, fai_len,ref, ref_aligned_threshold):
             send = max(int(parts[11]),int(parts[10]))
             qstart = min(int(parts[8]),int(parts[9]))
             qend = max(int(parts[9]),int(parts[8]))
-            ref_len = int(parts[4])
 
             #print(sstart, ref_query_dict[reference]["min_start"])
-
-            if sstart < ref_aligned_threshold and sstart < ref_query_dict[reference]["min_start"] or ref_query_dict[reference]["min_start_query"] == query:
+            if sstart < ref_query_dict[reference]["min_start"] or ref_query_dict[reference]["min_start_query"] == query:
                 if ref_query_dict[reference]["min_start_query"] != query:
                     ref_query_dict[reference]["min_start"] = sstart
                     ref_query_dict[reference]["min_start_query"] = query
@@ -75,7 +73,7 @@ def cut_end_contig(input_blast, blast_segs, fai_len,ref, ref_aligned_threshold):
                     if ref_query_dict[reference]["min_start_query_end"] < qend:
                         ref_query_dict[reference]["min_start_query_end"] = qend
 
-            if send > ref_len - ref_aligned_threshold and send > ref_query_dict[reference]["max_end"] or ref_query_dict[reference]["max_end_query"] == query:
+            if send > ref_query_dict[reference]["max_end"] or ref_query_dict[reference]["max_end_query"] == query:
                 if ref_query_dict[reference]["max_end_query"] != query:
                     ref_query_dict[reference]["max_end"] = send
                     ref_query_dict[reference]["max_end_query"] = query
@@ -167,7 +165,6 @@ def main():
     parser.add_argument("--gene_hit", help="Gene hit")
     parser.add_argument("--score", help="Score")
     parser.add_argument("--before_cut", help="contains info before cut(used for filter)")
-    parser.add_argument("--ref_aligned_threshold", help="Threshold for start or end alignment", type=int, default=100)
     args = parser.parse_args()
     input_file = args.input_file
     cycle_txt = args.cycle_txt
@@ -243,7 +240,7 @@ def main():
         #if float(prev_len) / float(elen) > blast_ratio:
             #print(prev_seg, prev_len,elen,"22222222")
             blast_segs.add(t[0])
-    ref_start_end_segs = cut_end_contig(args.input_file,blast_segs, fai_len,args.single_ref, args.ref_aligned_threshold)
+    ref_start_end_segs = cut_end_contig(args.input_file,blast_segs, fai_len,args.single_ref)
     for fline in open(args.input_file).readlines():
         # ref_length = ref_list[ref]
         contig_num = 10

@@ -22,12 +22,11 @@ conda activate ./PALACE
 3. Create a build directory and compile PALACE under it (use **sudo**, if required):
 
 ```
-cd seqgraph_phage/
-mkdir build
+cd seqGraph_phage/
 cd build
-cmake ..
 make
-cd scripts/
+chmod u+x ./matching
+cd ../scripts/
 python setup.py build_ext --inplace
 ```
 ### Approach 2, from scratch
@@ -64,11 +63,10 @@ git clone https://github.com/deepomicslab/PALACE
 mamba create -n palace ## or conda create -n palace
 mamba activate palace ## or conda activate palace
 cd ./PALACE/seqGraph_phage/
-mkdir build
 cd build
-cmake ..
 make
-cd scripts/
+chmod u+x ./matching
+cd ../scripts/
 python setup.py build_ext --inplace
 ```
 
