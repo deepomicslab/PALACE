@@ -1,5 +1,16 @@
 #!/bin/bash
-set -euo pipefail
+if [[ "${1:-}" == "--help" ]]; then
+    echo "Usage: palace <config.txt>"
+    echo ""
+    echo "PALACE: A comprehensive phage analysis workflow"
+    echo ""
+    echo "Arguments:"
+    echo "  <config.txt>   Path to the configuration file required for the analysis."
+    echo ""
+    echo "For more information, visit the documentation at:"
+    echo "https://github.com/deepomicslab/PALACE"
+    exit 0
+fi
 
 if [ $# -ne 1 ]; then
     echo "Usage: palace <config.txt>"
