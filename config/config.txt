@@ -1,0 +1,15 @@
+#NOTE! PLEASE DO NOT MODIFY THE KEY IN THIS FILE, JUST REPLACE THE VALUE FOR YOUR OWN PATH
+# ===== INPUT =====
+fastq1=/absolute/path/to/sample_1.fastq.gz
+fastq2=/absolute/path/to/sample_2.fastq.gz
+
+phagedb=/absolute/path/to/phage_reference.fasta
+protein_db=/absolute/path/to/protein_db
+gcn_model=/absolute/path/to/GCN_model.pt
+
+# ===== OUTPUT =====
+out_dir=/absolute/path/to/output_dir
+prefix=mysample
+
+# ===== RESOURCES =====
+threads=4

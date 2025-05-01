@@ -1,0 +1,275 @@
+#!/bin/bash
+set -euo pipefail
+
+if [ $# -ne 1 ]; then
+    echo "Usage: palace <config.txt>"
+    exit 1
+fi
+
+CONFIG_FILE=$1
+
+# auto check palace/scripts
+PALACE_SCRIPTS="${CONDA_PREFIX}/share/palace/scripts"
+#if [ -d "${CONDA_PREFIX:-}/share/palace/scripts" ]; then
+#    SCRIPTS="${CONDA_PREFIX}/share/palace/scripts"
+#elif [ -d "$(dirname "$0")/../share/palace/scripts" ]; then
+#    SCRIPTS="$(dirname "$0")/../share/palace/scripts"
+#else
+#    echo "Cannot find palace scripts directory." >&2
+#    exit 1
+#fi
+
+# --- Parse config.txt ---
+while IFS='=' read -r key value; do
+    [[ "$key" =~ ^\#.* ]] || [[ -z "$key" ]] && continue
+    key=$(echo $key | tr '.' '_')
+    eval "${key}='${value}'"
+done < "$CONFIG_FILE"
+
+log() { echo "[$(date '+%F %T')] $*"; }
+ensure_dir() { [ -d "$1" ] || mkdir -p "$1"; }
+time_step() {
+    local step_name="$1"
+    local start_time=$(date +%s)
+    log "===== START $step_name ====="
+    "${@:2}"
+    local end_time=$(date +%s)
+    local elapsed=$((end_time - start_time))
+    log "===== END $step_name (Elapsed: ${elapsed}s) ====="
+}
+
+# ---- Derived filenames ----
+filter_fastq1="$out_dir/01-qc/${prefix}_1_filter.fastq"
+filter_fastq2="$out_dir/01-qc/${prefix}_2_filter.fastq"
+first_bam="$out_dir/02-assembly/${prefix}_reads_pe_primary.sort.bam"
+assembly_fasta="$out_dir/02-assembly/assembly_graph.fasta"
+assembly_fastg="$out_dir/02-assembly/assembly_graph.fastg"
+hit_out="$out_dir/03-search/hit_seqs.out"
+node_score="$out_dir/03-search/node_scores.out"
+phage_refs="$out_dir/03-search/phage_refs.fasta"
+first_bam_depth="${first_bam}.depth"
+match_dir="$out_dir/04-match"
+graph_txt="$match_dir/${prefix}_graph.txt"
+filtered_graph_txt="$match_dir/${prefix}_filtered_graph.txt"
+final_result_dir="$out_dir/final_result"
+
+# ---- Script paths ----
+MAKE_FA_FROM_PATH="$PALACE_SCRIPTS/make_fa_from_path.py"
+FILTER_RESULT="$PALACE_SCRIPTS/filter_result.py"
+FILTER_CYCLE="$PALACE_SCRIPTS/filter_cycle.py"
+FILTER_CYCLE_GENE_SCORE="$PALACE_SCRIPTS/filter_cycle_gene_score.py"
+GET_REF_BY_INDEX="$PALACE_SCRIPTS/get_ref_by_index.py"
+FILTER_BY_BLAST2="$PALACE_SCRIPTS/filter_by_blast2.py"
+FILTER_BY_BLAST="$PALACE_SCRIPTS/filter_by_blast.py"
+EXTRACT_BY_REF="$PALACE_SCRIPTS/extract_by_ref.py"
+SPLIT_FASTG="$PALACE_SCRIPTS/split_fastg.py"
+FIND_PHAGE_GENE_MATCHES="$PALACE_SCRIPTS/find_phage_gene_matches.py"
+PHAGE_SCORING="$PALACE_SCRIPTS/phage_scoring.py"
+CORRECTED_DUP="$PALACE_SCRIPTS/corrected_dup.py"
+FILTER_GRAPH="$PALACE_SCRIPTS/tag_graph.py"
+FILTER_RAGTAG="$PALACE_SCRIPTS/filter_ragtag.py"
+CREATE_SUB_GRAPH="$PALACE_SCRIPTS/create_sub_graph.py"
+REMOVE_CYCLE_DUP="$PALACE_SCRIPTS/remove_cycle_dup.py"
+FIND_MOST_COMMON_RESULT="$PALACE_SCRIPTS/find_most_common_result.py"
+GET_MAIN_PATH="$PALACE_SCRIPTS/get_main_path.py"
+PARSE_REMAIN="$PALACE_SCRIPTS/parse_remain.py"
+
+# ---- Binary paths ----
+EXTRACT_REF="eref"
+GENERATE_GRAPH="generateGraph"
+MATCHING="matching"
+
+# ---- Step 1: Fastq QC ----
+step_fastq_qc() {
+    ensure_dir "$out_dir/01-qc"
+    if [[ -s "$filter_fastq1" && -s "$filter_fastq2" ]]; then
+        log "Step 1: QC - Skipped"
+        return
+    fi
+    fastp -i "$fastq1" -I "$fastq2" -o "$filter_fastq1" -O "$filter_fastq2" -w "$threads"
+}
+
+# ---- Step 2: Assembly & Alignment ----
+step_assembly_and_align() {
+    ensure_dir "$out_dir/02-assembly"
+    if [[ ! -s "$out_dir/02-assembly/contigs.fasta" ]]; then
+        spades.py --meta -o "$out_dir/02-assembly" -1 "$filter_fastq1" -2 "$filter_fastq2" -t "$threads" -m 250 --phred-offset 33
+    fi
+    if [[ ! -s "$assembly_fasta" ]]; then
+        python "$SPLIT_FASTG" -g "$assembly_fastg" -o "$assembly_fasta"
+    fi
+    if [[ ! -s "$assembly_fasta.fai" ]]; then
+        samtools faidx "$assembly_fasta"
+    fi
+    if [[ ! -s "$assembly_fastg.fai" ]]; then
+        samtools faidx "$assembly_fastg"
+    fi
+    if [[ ! -s "$first_bam.bai" ]]; then
+        if [[ ! -s "$first_bam" ]]; then
+            bwa index "$assembly_fasta"
+            bwa mem -t "$threads" "$assembly_fasta" "$filter_fastq1" "$filter_fastq2" | samtools view -F 0x0800 -buS - > "$out_dir/02-assembly/${prefix}_tmp.bam"
+            samtools sort -@ "$threads" "$out_dir/02-assembly/${prefix}_tmp.bam" -O BAM -o "$first_bam"
+        fi
+        samtools index -@ "$threads" "$first_bam"
+    fi
+}
+
+# ---- Step 3: Protein search & scoring ----
+step_protein_and_scoring() {
+    ensure_dir "$out_dir/03-search"
+    if [[ ! -s "$hit_out" ]]; then
+        python "$FIND_PHAGE_GENE_MATCHES" -f "$assembly_fasta" -n "$threads" -o "$out_dir/03-search" -p "$protein_db"
+    fi
+    if [[ ! -s "$node_score" ]]; then
+        python "$PHAGE_SCORING" "$assembly_fasta" "$node_score" True "$threads" "$gcn_model"
+    fi
+}
+
+# ---- Step 4: Extract reference & phage_refs ----
+step_extract_ref_and_phage_refs() {
+    if [[ ! -s "$out_dir/03-search/${prefix}_ref_names.txt" ]]; then
+        $EXTRACT_REF "$filter_fastq1" "$filter_fastq2" "$phagedb" "$out_dir/03-search/${prefix}_tmp.txt" 0.9 0.85 "$threads" > "$out_dir/03-search/${prefix}_ref_names.txt"
+    fi
+    if [[ ! -s "$phage_refs" ]]; then
+        python "$GET_REF_BY_INDEX" "$phagedb" "$phagedb.fai" "$out_dir/03-search/${prefix}_ref_names.txt" "$phage_refs" "$out_dir/03-search/${prefix}_ref_percent.txt"
+    fi
+    samtools faidx "$phage_refs"
+}
+
+# ---- Step 5: BLAST and generate graph ----
+step_blast_and_graph() {
+    ensure_dir "$match_dir"
+    if [[ ! -s "$assembly_fasta.blast" ]]; then
+        makeblastdb -in "$phage_refs" -dbtype nucl -out "$phage_refs"
+        blastn -query "$assembly_fasta" -out "$assembly_fasta.blast" \
+            -db "$phage_refs" -num_threads "$threads" \
+            -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen"
+    fi
+    samtools depth --threads "$threads" "$first_bam" > "$first_bam_depth"
+    avg_depth=$(awk '{sum+=$3} END { print (NR>0)?sum/NR:0 }' "$first_bam_depth")
+    bgzip -f "$first_bam_depth"
+    tabix -f -s 1 -b 2 -e 2 "${first_bam}.depth.gz"
+    if [[ ! -s "$graph_txt" ]]; then
+        $GENERATE_GRAPH "$first_bam" "$assembly_fastg.fai" "$graph_txt" "$avg_depth"
+    fi
+}
+
+# ---- Step 6: Filter graph ----
+step_filter_graph() {
+    if [[ ! -s "$filtered_graph_txt" ]]; then
+        python "$FILTER_GRAPH" "$assembly_fastg.fai" "$graph_txt" "${filtered_graph_txt}_pre.txt" "$avg_depth" 0 "$hit_out" "$node_score" "$assembly_fasta.blast" 0.7 "$assembly_fasta.fai" "$match_dir/all_hit_segs.txt" "$out_dir/02-assembly/contigs.paths"
+        uniq "${filtered_graph_txt}_pre.txt" > "$filtered_graph_txt"
+    fi
+}
+
+# ---- Step 7: Matching/cycle dedup ----
+step_matching_and_dedup() {
+    if [[ ! -s "$match_dir/${prefix}_cycle_nodup.txt" ]]; then
+        timeout 30m $MATCHING -g "$filtered_graph_txt" -r "$match_dir/${prefix}_linear.txt" -c "$match_dir/${prefix}_cycle.txt" -v 1 -s -i 10 -l "$out_dir/02-assembly/contigs.paths" || \
+            log "Step 7: Matching - Timeout or finished"
+        python "$REMOVE_CYCLE_DUP" "$match_dir/${prefix}_cycle.txt" "$match_dir/${prefix}_cycle_nodup.txt"
+        cat "$match_dir/${prefix}_linear.txt" "$match_dir/${prefix}_cycle_nodup.txt" > "$match_dir/${prefix}_all_result.txt"
+    fi
+}
+
+# ---- Step 8: Filtered fasta ----
+step_filtered_fasta() {
+    if [[ ! -s "$match_dir/${prefix}_filtered.fasta" ]]; then
+        python "$FILTER_RESULT" "$assembly_fasta" "$match_dir/${prefix}_all_result.txt" "$match_dir/${prefix}_filtered.fasta" "$assembly_fasta.blast" 0.75 "$hit_out" "$node_score" "$match_dir/${prefix}_filtered_cycle.txt"
+    fi
+}
+
+# ---- Step 9: Filtered fasta BLAST ----
+step_filtered_fasta_blast() {
+    if [[ ! -s "$match_dir/${prefix}_filtered.fasta.blast" ]]; then
+        makeblastdb -in "$phage_refs" -dbtype nucl -out "$phage_refs"
+        blastn -query "$match_dir/${prefix}_filtered.fasta" -num_threads "$threads" \
+            -out "$match_dir/${prefix}_filtered.fasta.blast" -db "$phage_refs" \
+            -outfmt "6 qaccver saccver pident qlen slen length mismatch gapopen qstart qend sstart send evalue bitscore"
+    fi
+}
+
+# ---- Step 10: Second matching and subgraph ----
+step_second_matching() {
+    ensure_dir "$out_dir/05-furth/second_match"
+    python "$FILTER_BY_BLAST2" "$match_dir/${prefix}_filtered.fasta.blast" "$out_dir/05-furth/need_second_match.txt"
+    contig_names=$(cut -f 2 "$out_dir/05-furth/need_second_match.txt" | tr '\n' ' ')
+    samtools faidx "$phage_refs" $contig_names > "$out_dir/05-furth/need_second.fasta"
+    python "$CREATE_SUB_GRAPH" "$filtered_graph_txt" "$out_dir/05-furth/second_match/$prefix" "$out_dir/05-furth/need_second_match.txt" "samtools" "${first_bam}.depth.gz" "$assembly_fasta.blast" "$out_dir/05-furth/similar_ref.txt" "$out_dir/03-search/${prefix}_ref_percent.txt"
+    cd "$out_dir/05-furth/second_match/"
+    for i in *.second; do
+        fullname=$i
+        second=$(echo $fullname | sed 's/\.[^.]*$//');
+        timeout 10m $MATCHING -g "$fullname" -r "${second}_linear.txt" -c "${second}_cycle.txt" -i 10 -v 1 -b -l "$out_dir/02-assembly/contigs.paths" --aggressive || \
+            log "Sub-matching $fullname timeout or finished"
+        refname=$(echo "$second" | sed -n 's/.*ref\(.*\)ref.*/\1/p')
+        original_refname=${refname}
+        refname=${refname//|/_}
+        python "$REMOVE_CYCLE_DUP" "${second}_cycle.txt" "${second}_cycle_nodup.txt"
+        cat "${second}_linear.txt" "${second}_cycle_nodup.txt" > "${second}_result_cycle.txt"
+        python "$MAKE_FA_FROM_PATH" "$assembly_fasta" "${second}_result_cycle.txt" "${refname}_unfiltered.fasta" 1
+        samtools faidx "${refname}_unfiltered.fasta"
+        if [ "$refname" == "remain" ]; then
+            ragtag.py scaffold -r "$out_dir/02-assembly/scaffolds.fasta" "${refname}_unfiltered.fasta" -o "$out_dir/05-furth/second_match/${refname}_ragtag" -d 2000
+            [ -s "$out_dir/05-furth/second_match/${refname}_ragtag/ragtag.scaffold.agp" ] && \
+                python "$FILTER_RAGTAG" "$out_dir/05-furth/second_match/${refname}_ragtag/ragtag.scaffold.agp" "$out_dir/05-furth/second_match/${refname}.rag.txt" 1
+            python "$PARSE_REMAIN" "$fullname" "$out_dir/05-furth/second_match/${refname}.rag.txt" "$out_dir/05-furth/second_match/${refname}.result.txt" 0.8 8000 "${second}_all_result_before_cut.txt" "$hit_out"
+        else
+            samtools faidx "$phage_refs" "$original_refname" > "$out_dir/05-furth/second_match/${refname//|/_}.fasta"
+            ragtag.py scaffold -r "$out_dir/05-furth/second_match/$refname.fasta" "${refname}_unfiltered.fasta" -o "$out_dir/05-furth/second_match/${refname}_ragtag" -d 2000
+            if [ -s "$out_dir/05-furth/second_match/${refname}_ragtag/ragtag.scaffold.agp" ]; then
+                python "$FILTER_RAGTAG" "$out_dir/05-furth/second_match/${refname}_ragtag/ragtag.scaffold.agp" "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold_part.txt" 0
+                samtools faidx "$out_dir/05-furth/second_match/${refname}_ragtag/ragtag.scaffold.fasta" "${original_refname}_RagTag" > "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold.fasta"
+            else
+                python "$GET_MAIN_PATH" "$fullname" "${second}_result_cycle.txt" "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold_part.txt"
+                python "$MAKE_FA_FROM_PATH" "$assembly_fasta" "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold_part.txt" "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold.fasta" 1
+            fi
+            first_line=$(head -n 1 "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold_part.txt")
+            sed -i.bak "s/${original_refname}_RagTag/$first_line/g" "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold.fasta"
+            makeblastdb -in "$out_dir/05-furth/second_match/$refname.fasta" -dbtype nucl -out "$out_dir/05-furth/second_match/$refname.fasta"
+            blastn -query "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold.fasta" -num_threads "$threads" -out "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold.fasta.blast" -db "$out_dir/05-furth/second_match/$refname.fasta" -outfmt "6 qaccver saccver pident qlen slen length mismatch gapopen qstart qend sstart send evalue bitscore"
+            python "$FILTER_BY_BLAST" "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold.fasta.blast" "$match_dir/${prefix}_cycle_nodup.txt" "$assembly_fasta.fai" "${second}_tmp.txt" 0 0.7 2000 -s "${original_refname}" --before_cut "${second}_all_result_before_cut.txt" --gene_hit "$hit_out" --score "$node_score" > "${second}_all_result.txt"
+        fi
+    done
+    cd - > /dev/null
+}
+
+# ---- Step 11: Final result ----
+step_final_result() {
+    ensure_dir "$final_result_dir"
+    python "$FILTER_CYCLE_GENE_SCORE" "$match_dir/${prefix}_filtered_cycle.txt" 0 "$hit_out" "$node_score" > "$final_result_dir/filtered_cycle_res_tmp.txt"
+    rm -f "$final_result_dir/${prefix}_final_tmp.txt"
+    if [ -f "$final_result_dir/filtered_cycle_res_tmp.txt" ]; then
+        cp "$final_result_dir/filtered_cycle_res_tmp.txt" "$final_result_dir/${prefix}_final_tmp.txt"
+    fi
+    if compgen -G "$out_dir/05-furth/second_match/*_ragtag_scaffold_part.txt" > /dev/null; then
+        python "$FIND_MOST_COMMON_RESULT" "$out_dir/05-furth/second_match" "$out_dir/05-furth/similar_ref.txt" "$final_result_dir/${prefix}_final_tmp.txt"
+    fi
+    if [ -f "$out_dir/05-furth/second_match/remain.result.txt" ]; then
+        cat "$out_dir/05-furth/second_match/remain.result.txt" >> "$final_result_dir/${prefix}_final_tmp.txt"
+    fi
+    if compgen -G "$out_dir/05-furth/second_match/*_all_result_before_cut.txt" > /dev/null; then
+        cat "$out_dir/05-furth/second_match/*_all_result_before_cut.txt" > "$final_result_dir/${prefix}_all_before_cut.txt"
+    fi
+    python "$FILTER_CYCLE" "$final_result_dir/${prefix}_final_tmp.txt" 0 >  "$final_result_dir/${prefix}_filtered_final_tmp.txt"
+    python "$CORRECTED_DUP" "$final_result_dir" "$prefix" "$final_result_dir/filtered_cycle_res_tmp.txt" "$final_result_dir/${prefix}_filtered_final_tmp.txt" "${prefix}_final.txt" "${prefix}_final.fasta" "$assembly_fasta" "${prefix}_cycle_nodup.txt" "$first_bam" "$final_result_dir/${prefix}_all_before_cut.txt" 10000
+}
+
+# ================== MAIN ==================
+log "============ PALACE pipeline started ============"
+PIPELINE_START=$(date +%s)
+time_step "Step 1: Fastq QC" step_fastq_qc
+time_step "Step 2: Assembly and Alignment" step_assembly_and_align
+time_step "Step 3: Protein search and scoring" step_protein_and_scoring
+time_step "Step 4: Extract reference and phage refs" step_extract_ref_and_phage_refs
+time_step "Step 5: BLAST and generate graph" step_blast_and_graph
+time_step "Step 6: Filter graph" step_filter_graph
+time_step "Step 7: Matching and deduplication" step_matching_and_dedup
+time_step "Step 8: Filtered fasta" step_filtered_fasta
+time_step "Step 9: Filtered fasta BLAST" step_filtered_fasta_blast
+time_step "Step 10: Second matching and subgraph" step_second_matching
+time_step "Step 11: Final result" step_final_result
+PIPELINE_END=$(date +%s)
+TOTAL_ELAPSED=$((PIPELINE_END - PIPELINE_START))
+log "All steps finished. Total elapsed time: ${TOTAL_ELAPSED}s"
+log "============ PALACE pipeline finished ============"
