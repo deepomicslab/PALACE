@@ -14,7 +14,7 @@ fi
 
 if [ $# -ne 1 ]; then
     echo "Usage: palace <config.txt>"
-    exit 1
+    exit 0
 fi
 
 CONFIG_FILE=$1
