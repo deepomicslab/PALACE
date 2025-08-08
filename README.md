@@ -6,9 +6,14 @@ PALACE is a computational framework based on deep learning models and conjugate 
 ## Installation
 ### Approach 1, install with mamba/conda.(Recommended)
 ```
-conda install -c bioconda palace
+conda create -n palace_env
+conda activate palace_env
+conda install -c bioconda -c conda-forge -c pytorch palace
 or
-mamba install -c bioconda palace #Recommended use mamba
+#mamba is recommended
+mamba create -n palace_env
+mamba activate palace_env
+mamba install -c bioconda -c conda-forge -c pytorch palace
 ```
 <!-- 1. Clone the repository and enter the directory:
 
