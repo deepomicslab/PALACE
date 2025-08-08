@@ -1,15 +1,16 @@
 #NOTE! PLEASE DO NOT MODIFY THE KEY IN THIS FILE, JUST REPLACE THE VALUE FOR YOUR OWN PATH
-# ===== INPUT =====
-fastq1=/absolute/path/to/sample_1.fastq.gz
-fastq2=/absolute/path/to/sample_2.fastq.gz
+#input
+fastq1=/demo/out_1.fastq.gz
+fastq2=/demo/out_2.fastq.gz
+##can be found at https://github.com/deepomicslab/PALACE.git
+phagedb=/home/ruohawang2/12.Phage_assem/pipeline/genome_db/checkv_reps.fna
+protein_db=/home/ruohawang2/12.Phage_assem/phage_protein_anno/SCAPP/scapp/protein_db
+gcn_model=/scratch/project/cs_shuaicli/pgz/phage/PALACE_sim/GCN_model_retrained.pt
 
-phagedb=/absolute/path/to/phage_reference.fasta
-protein_db=/absolute/path/to/protein_db
-gcn_model=/absolute/path/to/GCN_model.pt
+#output
+out_dir=/demo/output
+prefix=demo
+threads=8
 
-# ===== OUTPUT =====
-out_dir=/absolute/path/to/output_dir
-prefix=mysample
-
-# ===== RESOURCES =====
-threads=4
+#set conda
+ENV_PREFIX=
