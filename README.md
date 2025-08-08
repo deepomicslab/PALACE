@@ -4,8 +4,13 @@ PALACE is a computational framework based on deep learning models and conjugate 
 ![image](https://github.com/deepomicslab/PALACE/blob/main/pipeline.png)
  
 ## Installation
-### Approach 1, install with mamba/conda.
-1. Clone the repository and enter the directory:
+### Approach 1, install with mamba/conda.(Recommended)
+```
+conda install -c bioconda palace
+or
+mamba install -c bioconda palace #Recommended use mamba
+```
+<!-- 1. Clone the repository and enter the directory:
 
 ```
 git clone https://github.com/deepomicslab/PALACE
@@ -28,7 +33,7 @@ make
 chmod u+x ./matching
 cd ../scripts/
 python setup.py build_ext --inplace
-```
+``` -->
 ### Approach 2, from scratch
 ### Prerequisites
 ### Python packages
@@ -62,16 +67,15 @@ git clone https://github.com/deepomicslab/PALACE
 #create a new mamba(conda) env
 mamba create -n palace ## or conda create -n palace
 mamba activate palace ## or conda activate palace
-cd ./PALACE/seqGraph_phage/
-cd build
-make
-chmod u+x ./matching
-cd ../scripts/
+cd ./PALACE/
+cd bin
+chmod u+x ./*
+cd ../share/palace/scripts/
 python setup.py build_ext --inplace
 ```
 
 ## Using PALACE
-1. Config the config.txt file, [here](https://github.com/deepomicslab/PALACE/blob/main/config.txt) is a demo file.  
+1. Config the config.txt file, [here](https://github.com/deepomicslab/PALACE/tree/release_branch/config/config.txt) is a demo file.  
 * ```fastq1```, Read1 paired fastq file.
 * ```fastq2```, Read2 paired fastq file.
 * ```phagedb```, Phage reference database; the latest phage reference database can be download from [here](https://portland-my.sharepoint.com/:u:/g/personal/gzpan2-c_my_cityu_edu_hk/ESVoQEuNOz9HoBfP9vXho-EBUWQa63zSRvfWxRYmIxb2ww?e=ynlAO1).
@@ -80,15 +84,9 @@ python setup.py build_ext --inplace
 * ```threads```, Threads to be used.
 * ```out_dir```, Output directory.
 * ```prefix```, Intermediate file prefix, can be sample name.
-* ```PYTHON```, Python path.
-* ```BWA```, bwa path.
-* ```SAMTOOLS```, samtools path.
-* ```FASTP```, fastp path.
-* ```SPADES```, spades.py path.
-* ```NCBI_BIN```, ncbi-blast bin path, must contains makeblastdb, blastn and tblastn 
-* ```PALACE```, PALACE path.
+* ```ENV_PREFIX```, Conda ENV path. please keep empty if conda ENV is activated.
 2. Runing PALACE.  
-* ``` bash PALACE_PATH/pipe.sh config.txt```
+* ``` palace --config config.txt```
 
 ## Output
 * ```01-qc/```, fastp output.
