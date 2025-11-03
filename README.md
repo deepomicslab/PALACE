@@ -1,5 +1,5 @@
 # PALACE
-PALACE is a computational framework based on deep learning models and conjugate graph theory to assemble high-quality and confident phage genomes from metagenomic sequencing data. PALACE currently supports normal pair-end reads, Oxford Nanopore(ONT) and PacBio SMRT(PB) reads. The assembled phages genomes analyzed in the manuscript are available at [Google Drive](https://drive.google.com/drive/folders/1IN_HbWpjdS4Dhjpir5h_5EY52TDFSrpR?usp=sharing).
+PALACE is a computational framework based on deep learning models and conjugate graph theory to assemble high-quality and confident phage genomes from metagenomic sequencing data. PALACE currently supports normal pair-end reads. The assembled phages genomes analyzed in the manuscript are available at [Google Drive](https://drive.google.com/drive/folders/1IN_HbWpjdS4Dhjpir5h_5EY52TDFSrpR?usp=sharing).
  
 ![image](https://github.com/deepomicslab/PALACE/blob/main/pipeline.png)
  
@@ -16,8 +16,7 @@ mamba activate palace_env
 mamba install -y -c delta2cityu/label/test -c conda-forge -c bioconda -c pytorch palace
 ```
 ### Approach 2, install with environment.yml
-<!-- 1. Clone the repository and enter the directory:
-
+1. Clone the repository and enter the directory:
 ```
 git clone https://github.com/deepomicslab/PALACE
 cd ./PALACE
@@ -31,7 +30,6 @@ conda env create --prefix=./PALACE -f environment.yml
 conda activate ./PALACE  
 ```
 3. Create a build directory and compile PALACE under it (use **sudo**, if required):
-
 ```
 cd seqGraph_phage/
 cd build
@@ -39,7 +37,7 @@ make
 chmod u+x ./matching
 cd ../scripts/
 python setup.py build_ext --inplace
-``` -->
+```
 ### Approach 3, from scratch
 ### Prerequisites
 ### Python packages
