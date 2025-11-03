@@ -8,13 +8,14 @@ PALACE is a computational framework based on deep learning models and conjugate 
 ```
 conda create -n palace_env
 conda activate palace_env
-conda install -c bioconda palace
+conda install -y -c delta2cityu/label/test -c conda-forge -c bioconda -c pytorch palace
 or
 #mamba is recommended
 mamba create -n palace_env
 mamba activate palace_env
-mamba install -c bioconda palace
+mamba install -y -c delta2cityu/label/test -c conda-forge -c bioconda -c pytorch palace
 ```
+### Approach 2, install with environment.yml
 <!-- 1. Clone the repository and enter the directory:
 
 ```
@@ -39,7 +40,7 @@ chmod u+x ./matching
 cd ../scripts/
 python setup.py build_ext --inplace
 ``` -->
-### Approach 2, from scratch
+### Approach 3, from scratch
 ### Prerequisites
 ### Python packages
 * pysam==0.17.0
