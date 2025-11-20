@@ -30,6 +30,7 @@ def parse_blast_file(filename, ref_queries_output):
     for query_id, ref_lengths in query_ref_lengths.items():
         for ref_id, total_aligned_length in ref_lengths.items():
             query_length = query_lengths[query_id]
+            print(query_id, ref_id,total_aligned_length)
             #if total_aligned_length >= 2000 or (total_aligned_length / query_length) >= 0.7:
             if (total_aligned_length / query_length) >= 0.7:
                 ref_queries[ref_id].append(query_id)

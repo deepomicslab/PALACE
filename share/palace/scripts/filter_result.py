@@ -39,7 +39,8 @@ def max_score(line,phagescore):
     return max_score
 
 def get_seg_len(seg):
-    return fai_len[seg.replace("+","").replace("-","").replace("ref","").replace("self","").replace("gene","").replace("gene","").replace("score","").replace("cycle","")]
+    seg_tmp = seg.replace("\t","").replace(" ","")
+    return fai_len[seg_tmp.replace("+","").replace("-","").replace("ref","").replace("self","").replace("gene","").replace("gene","").replace("score","").replace("cycle","")]
 def line_len(line):
     result_len = 0
     vs = re.split(r'[+-]',line)
@@ -86,6 +87,12 @@ if prev_seg != "":
     #if float(prev_len) / float(elen) > blast_ratio or prev_len > 2000:
     if float(prev_len) / float(elen) > blast_ratio:
         blast_segs.add(t[0])
+#print(blast_segs)
+# gene_res = set()
+# with open(gene_hit, 'r') as gene_lst:
+#     for gene_r in gene_lst:
+#         gene_res.add(gene_r.strip())
+
 
 phagescore = {}
 with open(phagescore_file, 'r') as ps:
@@ -94,6 +101,7 @@ with open(phagescore_file, 'r') as ps:
         id_ = item[0]
         if float(item[1]) >= 0.7:
             phagescore[id_] = float(item[1])
+print(phagescore)
 
 genehit = []
 # for id, i in enumerate(orderintmp):
@@ -125,6 +133,7 @@ for idx, line in enumerate(orderin.readlines()):
         continue
     tmp = line.strip().split("\t")
     if len(tmp) == 1 and self_tag:
+        print(tmp,max_score(line,phagescore))
         # if tmp[0][0:-1] not in blast_segs or phagescore[idx] < 0.7:
         #     continue
         if contains_gen(line, genehit) or max_score(line,phagescore) > 0.7:
@@ -134,6 +143,7 @@ for idx, line in enumerate(orderin.readlines()):
                     tmp_seq = record_dict[t[0:-1]].seq.reverse_complement()
                 seq = seq + tmp_seq
             #faout.write(">self-gene" + "".join(tmp) + "\n" + str(seq) + "\n")
+            print("selfgene" + "".join(tmp))
             res_count.add('selfgene'+''.join(tmp))
             # cycle_gene_self.write(tmp+'\n')
         else:
@@ -145,16 +155,18 @@ for idx, line in enumerate(orderin.readlines()):
             if "".join(tmp) not in in_faout:
                 faout.write(">" + "".join(tmp) + "\n" + str(seq) + "\n")
                 in_faout.append("".join(tmp))
-            #res_count.add(''.join(tmp))
+            res_count.add(''.join(tmp))
         continue
 
     if cycle_tag:
         # if tmp[0][0:-1] not in blast_segs or phagescore[idx] < 0.7:
         #     continue
         if contains_gen(line, genehit):
+            print("cyclegene" + "".join(tmp))
             res_count.add('cyclegene'+''.join(tmp))
             # cycle_gene_self.write(tmp+'\n')
         if max_score(line,phagescore) >= 0.9:
+            print("cyclescore" + "".join(tmp))
             res_count.add('cyclescore'+''.join(tmp))
             # cycle_gene_self.write(tmp+'\n')
 
@@ -192,12 +204,14 @@ for idx, line in enumerate(orderin.readlines()):
             tmp_seq = record_dict[t[0:-1]].seq.reverse_complement()
         seq = seq + tmp_seq
     if contains_gen(line, genehit) and max_score(line,phagescore) >= 0.9:
+        print("genescore" + "".join(tmp))
         if "".join(tmp) not in in_faout:
             faout.write(">" + "".join(tmp) + "\n" + str(seq) + "\n")
             in_faout.append("".join(tmp))
             #res_count.add('genescore'+''.join(tmp))
     else:
         if max_score(line,phagescore) >= 0.9:
+            #print("score" + "".join(tmp))
             if "".join(tmp) not in in_faout:
                 faout.write(">" + "".join(tmp) + "\n" + str(seq) + "\n")
                 in_faout.append("".join(tmp))

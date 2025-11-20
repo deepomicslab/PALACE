@@ -4,66 +4,15 @@ set -euo pipefail
 #######################################################################################
 # PALACE Pipeline - Phage Assembly and Analysis
 # 
-# Usage: ./palace_pipeline.sh --config <config_file>
-#        ./palace_pipeline.sh --help
-#######################################################################################
-
-print_usage() {
-  cat <<EOF
-PALACE Pipeline - Phage Assembly and Analysis
-
-Usage:
-  $(basename "$0") --config <config_file>
-  $(basename "$0") --help
-
-Options:
-  --config    Path to configuration file (required)
-  --help      Show this help message and exit
-
-If no options are given, this help message is printed.
-EOF
-}
-
-# ------------------------------------------------------------------------------
-# Parse command‐line arguments
-# ------------------------------------------------------------------------------
-if [ $# -eq 0 ]; then
-  print_usage
-  exit 1
-fi
-
-config_file=""
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --config)
-      if [ -n "${2-}" ] && [[ ! "$2" =~ ^-- ]]; then
-        config_file=$2
-        shift 2
-      else
-        echo "Error: --config requires a file path argument"
-        print_usage
-        exit 1
-      fi
-      ;;
-    --help|-h)
-      print_usage
-      exit 0
-      ;;
-    *)
-      echo "Unknown option: $1"
-      print_usage
-      exit 1
-      ;;
-  esac
-done
-
-# Ensure we got a config file
-if [ -z "$config_file" ]; then
-  echo "Error: --config <config_file> is required"
-  print_usage
-  exit 1
-fi
-
+# Description: This pipeline performs phage genome assembly and analysis from 
+#              paired-end sequencing data
+#
+# Usage: ./palace_pipeline.sh <config_file>
+#
+# Author: [Your Name]
+# Version: 2.0
+# Date: 2025
+# This version fix the empty phage ref bug
 #######################################################################################
 
 # Color codes for logging
@@ -87,7 +36,7 @@ log() {
     local level=$1
     shift
     local message="$@"
-
+    
     case $level in
         "INFO")
             echo -e "${BLUE}[$(print_time)] [INFO]${NC} $message"
@@ -140,7 +89,7 @@ dir_exists_with_content() {
 check_skip_step() {
     local output_file=$1
     local step_name=$2
-
+    
     if file_exists_with_content "$output_file"; then
         log "WARNING" "Output file $output_file already exists. Skipping $step_name"
         return 0
@@ -152,7 +101,7 @@ check_skip_step() {
 handle_error() {
     local exit_code=$1
     local error_message=$2
-
+    
     if [ $exit_code -ne 0 ]; then
         log "ERROR" "$error_message (Exit code: $exit_code)"
         exit $exit_code
@@ -164,16 +113,25 @@ show_progress() {
     local current=$1
     local total=$2
     local step_name=$3
-
+    
     local percent=$((current * 100 / total))
     log "INFO" "Progress: Step $current/$total ($percent%) - $step_name"
 }
 
-# ------------------------------------------------------------------------------
-# Now proceed with the rest of your script, using $config_file in place of $1
-# ------------------------------------------------------------------------------
+#######################################################################################
+# CONFIGURATION PARSING
+#######################################################################################
 
 log "INFO" "=== PALACE Pipeline Starting ==="
+
+# Check if config file is provided
+if [ $# -eq 0 ]; then
+    log "ERROR" "No configuration file provided"
+    echo "Usage: $0 <config_file>"
+    exit 1
+fi
+
+config_file=$1
 
 # Check if config file exists
 if [ ! -f "$config_file" ]; then
@@ -203,20 +161,14 @@ while IFS='=' read -r key value; do
     esac
 done < "$config_file"
 
-if [ -z "${ENV_PREFIX-}" ]; then
-    ENV_PREFIX="${CONDA_PREFIX-}"
-    log "WARNING" "ENV_PREFIX unset, use the current CONDA_PREFIX: $ENV_PREFIX"
-else
-    log "INFO" "  ENV_PREFIX = $ENV_PREFIX"
-fi
-
-
 #######################################################################################
 # VALIDATE CONFIGURATION VARIABLES
 #######################################################################################
 
 # Check if essential variables are defined
-essential_vars=("fastq1" "fastq2" "phagedb" "protein_db" "gcn_model" "out_dir" "prefix" "threads")
+essential_vars=("fastq1" "fastq2" "phagedb" "protein_db" "gcn_model" "out_dir" "prefix" "threads" 
+                "PYTHON" "BWA" "SAMTOOLS" "FASTP" "SPADES" "NCBI_BIN" "PALACE" "RAGTAG")
+
 for var in "${essential_vars[@]}"; do
     if [ -z "${!var:-}" ]; then
         log "ERROR" "Required variable '$var' is not defined in config file"
@@ -227,19 +179,12 @@ done
 #######################################################################################
 # SETUP PATHS (After configuration is loaded)
 #######################################################################################
-PYTHON=$ENV_PREFIX/bin/python
-BWA=$ENV_PREFIX/bin/bwa
-SAMTOOLS=$ENV_PREFIX/bin/samtools
-FASTP=$ENV_PREFIX/bin/fastp
-SPADES=$ENV_PREFIX/bin/spades.py
-NCBI_BIN=$ENV_PREFIX/bin
-RAGTAG=$ENV_PREFIX/bin/ragtag.py
 
 # Now we can safely use $PALACE since it's been loaded from config
-SCRIPTS="$ENV_PREFIX/share/palace/scripts"
-MATCHING="$ENV_PREFIX/bin/matching"
-GENERATE_GRAPH="$ENV_PREFIX/bin/generateGraph"
-EXTRACT_REF="$ENV_PREFIX/bin/eref"
+SCRIPTS="$PALACE/scripts"
+MATCHING="$PALACE/build/matching"
+GENERATE_GRAPH="$PALACE/build/glinyu"
+EXTRACT_REF="$PALACE/build/eref"
 
 # Define all Python scripts
 declare -A PYTHON_SCRIPTS=(
@@ -380,7 +325,7 @@ else
     $SPADES --meta -o "$out_dir/02-assembly" \
             -1 "${OUTPUT_FILES[filter_fastq1]}" \
             -2 "${OUTPUT_FILES[filter_fastq2]}" \
-            -t "$threads" -m 250 --phred-offset 33
+            -t "$threads" -m 200 --phred-offset 33 --only-assembler
     
     handle_error $? "SPAdes assembly failed"
 fi
@@ -434,6 +379,8 @@ if ! check_skip_step "${OUTPUT_FILES[first_bam]}.bai" "Alignment"; then
 fi
 
 log "SUCCESS" "Step 2: Assembly and Alignment completed"
+#!/bin/bash
+set -euo pipefail
 
 #######################################################################################
 # STEP 3: REFERENCE AND PROTEIN SEARCH
@@ -451,7 +398,7 @@ if ! check_skip_step "${OUTPUT_FILES[hit_out]}" "Protein search"; then
             -o "$out_dir/03-search" \
             -p "$protein_db" \
             --ncbi_bin "$NCBI_BIN"
-    
+
     handle_error $? "Protein search failed"
 fi
 
@@ -462,7 +409,7 @@ if ! check_skip_step "${OUTPUT_FILES[node_score]}" "Contig scoring"; then
             "${OUTPUT_FILES[assembly_fasta]}" \
             "${OUTPUT_FILES[node_score]}" \
             True "$threads" "$gcn_model"
-    
+
     handle_error $? "Contig scoring failed"
 fi
 
@@ -472,7 +419,7 @@ if ! check_skip_step "$out_dir/03-search/${prefix}_ref_names.txt" "Reference ext
     $EXTRACT_REF "${OUTPUT_FILES[filter_fastq1]}" "${OUTPUT_FILES[filter_fastq2]}" \
                  "$phagedb" "$out_dir/03-search/${prefix}_tmp.txt" \
                  0.9 0.85 "$threads" > "$out_dir/03-search/${prefix}_ref_names.txt"
-    
+
     handle_error $? "Reference extraction failed"
 fi
 
@@ -484,9 +431,14 @@ if ! check_skip_step "${OUTPUT_FILES[phage_refs]}" "Reference sequence retrieval
             "$out_dir/03-search/${prefix}_ref_names.txt" \
             "${OUTPUT_FILES[phage_refs]}" \
             "$out_dir/03-search/${prefix}_ref_percent.txt"
-    
-    $SAMTOOLS faidx "${OUTPUT_FILES[phage_refs]}"
-    handle_error $? "Reference sequence retrieval failed"
+
+    if [ -s "${OUTPUT_FILES[phage_refs]}" ]; then
+        log "INFO" "Reference sequences found, creating index..."
+        $SAMTOOLS faidx "${OUTPUT_FILES[phage_refs]}"
+    else
+        log "WARNING" "No reference sequences found (phage_refs.fasta is empty). Pipeline will continue without reference-based steps."
+        touch "${OUTPUT_FILES[phage_refs]}.fai"
+    fi
 fi
 
 log "SUCCESS" "Step 3: Reference and Protein Search completed"
@@ -498,38 +450,48 @@ log "SUCCESS" "Step 3: Reference and Protein Search completed"
 show_progress 4 $total_steps "Graph Construction and Matching"
 create_dir "$out_dir/04-match"
 
+HAS_REFERENCES=false
+if [ -s "${OUTPUT_FILES[phage_refs]}" ]; then
+    HAS_REFERENCES=true
+fi
+
 # Sub-step 4.1: BLAST alignment
 if ! check_skip_step "${OUTPUT_FILES[assembly_fasta]}.blast" "BLAST alignment"; then
-    log "INFO" "Running BLAST alignment..."
-    
-    # Make BLAST database
-    $NCBI_BIN/makeblastdb -in "${OUTPUT_FILES[phage_refs]}" -dbtype nucl \
-                          -out "${OUTPUT_FILES[phage_refs]}" &>/dev/null
-    
-    # Run BLAST
-    $NCBI_BIN/blastn -query "${OUTPUT_FILES[assembly_fasta]}" \
-                     -out "${OUTPUT_FILES[assembly_fasta]}.blast" \
-                     -db "${OUTPUT_FILES[phage_refs]}" \
-                     -num_threads "$threads" \
-                     -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen"
-    
-    handle_error $? "BLAST alignment failed"
+    if [ "$HAS_REFERENCES" = true ]; then
+        log "INFO" "Running BLAST alignment..."
+
+        # Make BLAST database
+        $NCBI_BIN/makeblastdb -in "${OUTPUT_FILES[phage_refs]}" -dbtype nucl \
+                              -out "${OUTPUT_FILES[phage_refs]}" &>/dev/null
+
+        # Run BLAST
+        $NCBI_BIN/blastn -query "${OUTPUT_FILES[assembly_fasta]}" \
+                         -out "${OUTPUT_FILES[assembly_fasta]}.blast" \
+                         -db "${OUTPUT_FILES[phage_refs]}" \
+                         -num_threads "$threads" \
+                         -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore qlen slen"
+
+        handle_error $? "BLAST alignment failed"
+    else
+        log "WARNING" "Skipping BLAST alignment (no reference sequences available)"
+        touch "${OUTPUT_FILES[assembly_fasta]}.blast"
+    fi
 fi
 
 # Sub-step 4.2: Calculate coverage depth
 if ! check_skip_step "${OUTPUT_FILES[first_bam]}.depth.gz" "Depth calculation"; then
     log "INFO" "Calculating coverage depth..."
-    
+
     $SAMTOOLS depth --threads "$threads" "${OUTPUT_FILES[first_bam]}" > "${OUTPUT_FILES[first_bam]}.depth"
     first_depth=$(awk '{sum+=$3} END { print sum/NR }' "${OUTPUT_FILES[first_bam]}.depth")
-    bgzip -f "${OUTPUT_FILES[first_bam]}.depth"
-    tabix -f -s 1 -b 2 -e 2 "${OUTPUT_FILES[first_bam]}.depth.gz"
-    
+    /gpfs1/home/gzpan2/mambaforge/envs/phispy/bin/bgzip -f "${OUTPUT_FILES[first_bam]}.depth"
+    /gpfs1/home/gzpan2/mambaforge/envs/phispy/bin/tabix -f -s 1 -b 2 -e 2 "${OUTPUT_FILES[first_bam]}.depth.gz"
+
     handle_error $? "Depth calculation failed"
 else
     #first_depth=$(zcat "${OUTPUT_FILES[first_bam]}.depth.gz" | awk '{sum+=$3} END { print sum/NR }')
-    first_depth=53
-
+    first_depth=32
+    echo "bam depth is ${first_depth}"
 fi
 
 log "INFO" "Average sequencing depth: $first_depth"
@@ -541,7 +503,7 @@ if ! check_skip_step "$out_dir/04-match/${prefix}_graph.txt" "Graph generation";
                     "${OUTPUT_FILES[assembly_fastg]}.fai" \
                     "$out_dir/04-match/${prefix}_graph.txt" \
                     "$first_depth"
-    
+
     handle_error $? "Graph generation failed"
 fi
 
@@ -560,22 +522,19 @@ if ! check_skip_step "$out_dir/04-match/${prefix}_filtered_graph.txt" "Graph fil
             "${OUTPUT_FILES[assembly_fasta]}.fai" \
             "$out_dir/04-match/all_hit_segs.txt" \
             "$out_dir/02-assembly/contigs.paths"
-    
+
     uniq "$out_dir/04-match/${prefix}_filtered_graph_pre.txt" > "$out_dir/04-match/${prefix}_filtered_graph.txt"
     handle_error $? "Graph filtering failed"
 fi
 
 # Sub-step 4.5: Path matching
-log "INFO" "Running path matching algorithm ..."
+log "INFO" "Running path matching algorithm..."
 $MATCHING -g "$out_dir/04-match/${prefix}_filtered_graph.txt" \
-                     -r "$out_dir/04-match/${prefix}_linear.txt" \
-                     -c "$out_dir/04-match/${prefix}_cycle.txt" \
-                     -v 1 -s -i 10 \
-                     -l "$out_dir/02-assembly/contigs.paths"
-handle_error $? "matching error"
-#if [ $? -eq 124 ]; then
-#    log "WARNING" "Path matching timed out after 30 minutes"
-#fi
+          -r "$out_dir/04-match/${prefix}_linear.txt" \
+          -c "$out_dir/04-match/${prefix}_cycle.txt" \
+          -v 1 -s -i 10 \
+          -l "$out_dir/02-assembly/contigs.paths"
+handle_error $? "Path matching failed"
 
 # Remove duplicates from cycles
 $PYTHON "${PYTHON_SCRIPTS[REMOVE_CYCLE_DUP]}" \
@@ -600,17 +559,22 @@ $PYTHON "${PYTHON_SCRIPTS[FILTER_RESULT]}" \
 
 # BLAST filtered results
 if ! check_skip_step "$out_dir/04-match/${prefix}_filtered.fasta.blast" "Filtered BLAST"; then
-    log "INFO" "Running BLAST on filtered results..."
-    # BLAST against reference
-    $NCBI_BIN/makeblastdb -in "${OUTPUT_FILES[phage_refs]}" -dbtype nucl \
-	             -out "${OUTPUT_FILES[phage_refs]}" &>/dev/null
-    $NCBI_BIN/blastn -query "$out_dir/04-match/${prefix}_filtered.fasta" \
-                     -num_threads "$threads" \
-                     -out "$out_dir/04-match/${prefix}_filtered.fasta.blast" \
-                     -db "${OUTPUT_FILES[phage_refs]}" \
-                     -outfmt "6 qaccver saccver pident qlen slen length mismatch gapopen qstart qend sstart send evalue bitscore"
-    
-    handle_error $? "Filtered BLAST failed"
+    if [ "$HAS_REFERENCES" = true ]; then
+        log "INFO" "Running BLAST on filtered results..."
+        # BLAST against reference
+        $NCBI_BIN/makeblastdb -in "${OUTPUT_FILES[phage_refs]}" -dbtype nucl \
+                         -out "${OUTPUT_FILES[phage_refs]}" &>/dev/null
+        $NCBI_BIN/blastn -query "$out_dir/04-match/${prefix}_filtered.fasta" \
+                         -num_threads "$threads" \
+                         -out "$out_dir/04-match/${prefix}_filtered.fasta.blast" \
+                         -db "${OUTPUT_FILES[phage_refs]}" \
+                         -outfmt "6 qaccver saccver pident qlen slen length mismatch gapopen qstart qend sstart send evalue bitscore"
+
+        handle_error $? "Filtered BLAST failed"
+    else
+        log "WARNING" "Skipping filtered BLAST (no reference sequences available)"
+        touch "$out_dir/04-match/${prefix}_filtered.fasta.blast"
+    fi
 fi
 
 log "SUCCESS" "Step 4: Graph Construction and Matching completed"
@@ -622,20 +586,14 @@ log "SUCCESS" "Step 4: Graph Construction and Matching completed"
 show_progress 5 $total_steps "Further Assembly"
 create_dir "$out_dir/05-furth/second_match"
 
-# Identify sequences needing second match
-log "INFO" "Identifying sequences for second round matching..."
-$PYTHON "${PYTHON_SCRIPTS[GENERATE_SECOND_WITH_BLAST]}" \
-        "$out_dir/04-match/${prefix}_filtered.fasta.blast" \
-        "$out_dir/05-furth/need_second_match.txt"
-
-# Extract reference sequences
-contig_names=$(cut -f 2 "$out_dir/05-furth/need_second_match.txt" | tr '\n' ' ')
-if [ ! -z "$contig_names" ]; then
-    $SAMTOOLS faidx "${OUTPUT_FILES[phage_refs]}" $contig_names > "$out_dir/05-furth/need_second.fasta"
+if [ "$HAS_REFERENCES" = true ]; then
+    $PYTHON "${PYTHON_SCRIPTS[GENERATE_SECOND_WITH_BLAST]}" \
+            "$out_dir/04-match/${prefix}_filtered.fasta.blast" \
+            "$out_dir/05-furth/need_second_match.txt"
+else
+    touch "$out_dir/05-furth/need_second_match.txt"
 fi
 
-# Create subgraphs
-log "INFO" "Creating subgraphs for second round matching..."
 $PYTHON "${PYTHON_SCRIPTS[CREATE_SUB_GRAPH]}" \
         "$out_dir/04-match/${prefix}_filtered_graph.txt" \
         "$out_dir/05-furth/second_match/$prefix" \
@@ -646,119 +604,125 @@ $PYTHON "${PYTHON_SCRIPTS[CREATE_SUB_GRAPH]}" \
         "$out_dir/05-furth/similar_ref.txt" \
         "$out_dir/03-search/${prefix}_ref_percent.txt"
 
-# Process each subgraph
 log "INFO" "Processing subgraphs..."
 subgraph_count=$(ls "$out_dir/05-furth/second_match"/*.second 2>/dev/null | wc -l)
+
+if [ $subgraph_count -eq 0 ]; then
+    log "WARNING" "No subgraphs found - this might indicate an issue"
+else
+    log "INFO" "Found $subgraph_count subgraph(s) to process"
+fi
+
 current_subgraph=0
 
 for fullname in "$out_dir/05-furth/second_match"/*.second; do
     [ -e "$fullname" ] || continue
-    
+
     current_subgraph=$((current_subgraph + 1))
     second="${fullname%.second}"
     refname=$(echo "$second" | sed -n 's/.*ref\(.*\)ref.*/\1/p')
-    
+
     log "INFO" "Processing subgraph $current_subgraph/$subgraph_count: $refname"
-    
+
     if [ "$refname" == "remain" ]; then
-        # Process remaining graph
-        #$PYTHON "${PYTHON_SCRIPTS[FILTER_REMAIN_RESULT]}" \
-        #        "$out_dir/04-match/${prefix}_linear.txt" \
-        #        "$out_dir/05-furth/need_second_match.txt" \
-        #        "${second}_result_cycle.txt"
-	timeout 30m $MATCHING -g "$fullname" \
+        log "INFO" "Processing 'remain' graph (non-reference contigs)..."
+
+        timeout 30m $MATCHING -g "$fullname" \
                             -r "${second}_linear.txt" \
                             -c "${second}_cycle.txt" \
                             -i 10 -v 1 -b \
-                            -l "$out_dir/02-assembly/contigs.paths" \
-	touch "${second}_cycle_nodup.txt"
-        $PYTHON "${PYTHON_SCRIPTS[REMOVE_CYCLE_DUP]}" \
-                "${second}_cycle.txt" \
-                "${second}_cycle_nodup.txt"
-	echo "$PYTHON \"${PYTHON_SCRIPTS[REMOVE_CYCLE_DUP]}\" \"${second}_cycle.txt\" \"${second}_cycle_nodup.txt\""
-        cat "${second}_linear.txt" "${second}_cycle_nodup.txt" > "${second}_result_cycle.txt"
+                            -l "$out_dir/02-assembly/contigs.paths" --aggressive
+
+        if [ $? -eq 124 ]; then
+            log "WARNING" "Matching timed out for remain graph"
+            continue
+        fi
+
+        if [ -s "${second}_cycle.txt" ]; then
+            $PYTHON "${PYTHON_SCRIPTS[REMOVE_CYCLE_DUP]}" "${second}_cycle.txt" "${second}_cycle_nodup.txt"
+            cat "${second}_linear.txt" "${second}_cycle_nodup.txt" > "${second}_result_cycle.txt"
+        else
+            cat "${second}_linear.txt" > "${second}_result_cycle.txt"
+        fi
+
+        $PYTHON "${PYTHON_SCRIPTS[MAKE_FA_FROM_PATH]}" \
+                "${OUTPUT_FILES[assembly_fasta]}" \
+                "${second}_result_cycle.txt" \
+                "${second}_unfiltered.fasta" 1
+
+        $SAMTOOLS faidx "${second}_unfiltered.fasta"
+
+        if [ -f "$out_dir/02-assembly/scaffolds.fasta" ]; then
+            $RAGTAG scaffold -r "$out_dir/02-assembly/scaffolds.fasta" \
+                            "${second}_unfiltered.fasta" \
+                            -o "$out_dir/05-furth/second_match/${refname}_ragtag" \
+                            -d 2000
+
+            if [ -s "$out_dir/05-furth/second_match/${refname}_ragtag/ragtag.scaffold.agp" ]; then
+                $PYTHON "${PYTHON_SCRIPTS[FILTER_RAGTAG]}" \
+                        "$out_dir/05-furth/second_match/${refname}_ragtag/ragtag.scaffold.agp" \
+                        "$out_dir/05-furth/second_match/${refname}.rag.txt" 1
+            else
+                cp "${second}_result_cycle.txt" "$out_dir/05-furth/second_match/${refname}.rag.txt"
+            fi
+
+            $PYTHON "${PYTHON_SCRIPTS[PARSE_REMAIN]}" \
+                    "$fullname" \
+                    "$out_dir/05-furth/second_match/${refname}.rag.txt" \
+                    "$out_dir/05-furth/second_match/$refname.result.txt" \
+                    0.6 8000 \
+                    "${second}_all_result_before_cut.txt" \
+                    "${OUTPUT_FILES[hit_out]}"
+        else
+            log "WARNING" "scaffolds.fasta not found - skipping RagTag for remain graph"
+            cp "${second}_result_cycle.txt" "$out_dir/05-furth/second_match/$refname.result.txt"
+            cp "${second}_result_cycle.txt" "${second}_all_result_before_cut.txt"
+        fi
+
     else
-        # Run matching with timeout
+        log "INFO" "Processing with reference: $refname"
+
         timeout 30m $MATCHING -g "$fullname" \
                             -r "${second}_linear.txt" \
                             -c "${second}_cycle.txt" \
                             -i 10 -v 1 -b \
                             -l "$out_dir/02-assembly/contigs.paths" \
                             --aggressive
-        
+
         if [ $? -eq 124 ]; then
             log "WARNING" "Matching timed out for $refname"
             continue
         fi
-        
-        # Remove duplicates
+
         $PYTHON "${PYTHON_SCRIPTS[REMOVE_CYCLE_DUP]}" \
                 "${second}_cycle.txt" \
                 "${second}_cycle_nodup.txt"
-        
+
         cat "${second}_linear.txt" "${second}_cycle_nodup.txt" > "${second}_result_cycle.txt"
-    fi
-    
-    # Create FASTA from paths
-    $PYTHON "${PYTHON_SCRIPTS[MAKE_FA_FROM_PATH]}" \
-            "${OUTPUT_FILES[assembly_fasta]}" \
-            "${second}_result_cycle.txt" \
-            "${second}_unfiltered.fasta" 1
-    
-    $SAMTOOLS faidx "${second}_unfiltered.fasta"
-    
-    # Process based on reference type
-    if [ "$refname" == "remain" ]; then
-        log "INFO" "Processing remaining contigs..."
-        
-        # RagTag scaffolding
-	if [ -d "$out_dir/05-furth/second_match/${refname}_ragtag" ]; then
-	   rm -rf "$out_dir/05-furth/second_match/${refname}_ragtag"
-        fi
-        $RAGTAG scaffold -r "$out_dir/02-assembly/scaffolds.fasta" \
-                        "${second}_unfiltered.fasta" \
-                        -o "$out_dir/05-furth/second_match/${refname}_ragtag" \
-                        -d 2000
-        
-        if [ -s "$out_dir/05-furth/second_match/${refname}_ragtag/ragtag.scaffold.agp" ]; then
-            $PYTHON "${PYTHON_SCRIPTS[FILTER_RAGTAG]}" \
-                    "$out_dir/05-furth/second_match/${refname}_ragtag/ragtag.scaffold.agp" \
-                    "$out_dir/05-furth/second_match/${refname}.rag.txt" 1
-        else
-            cp "${second}_result_cycle.txt" "$out_dir/05-furth/second_match/${refname}.rag.txt"
-        fi
-        
-        # Parse remaining
-        $PYTHON "${PYTHON_SCRIPTS[PARSE_REMAIN]}" \
-                "$fullname" \
-                "$out_dir/05-furth/second_match/${refname}.rag.txt" \
-                "$out_dir/05-furth/second_match/$refname.result.txt" \
-                0.8 8000 \
-                "${second}_all_result_before_cut.txt" \
-                "${OUTPUT_FILES[hit_out]}"
-    else
-        log "INFO" "Processing with reference: $refname"
-        
-        # Extract reference sequence
+
+        $PYTHON "${PYTHON_SCRIPTS[MAKE_FA_FROM_PATH]}" \
+                "${OUTPUT_FILES[assembly_fasta]}" \
+                "${second}_result_cycle.txt" \
+                "${second}_unfiltered.fasta" 1
+
+        $SAMTOOLS faidx "${second}_unfiltered.fasta"
+
         $SAMTOOLS faidx "${OUTPUT_FILES[phage_refs]}" "$refname" > "$out_dir/05-furth/second_match/${refname//|/_}.fasta"
-        
+
         original_refname="$refname"
         refname="${refname//|/_}"
-        
+
         # RagTag scaffolding
-	if [ -d "$out_dir/05-furth/second_match/${refname}_ragtag" ]; then
-	   rm -rf "$out_dir/05-furth/second_match/${refname}_ragtag"
-        fi
         $RAGTAG scaffold -r "$out_dir/05-furth/second_match/$refname.fasta" \
                         "${second}_unfiltered.fasta" \
                         -o "$out_dir/05-furth/second_match/${refname}_ragtag" \
                         -d 2000
-        
+
         if [ -s "$out_dir/05-furth/second_match/${refname}_ragtag/ragtag.scaffold.agp" ]; then
             $PYTHON "${PYTHON_SCRIPTS[FILTER_RAGTAG]}" \
                     "$out_dir/05-furth/second_match/${refname}_ragtag/ragtag.scaffold.agp" \
                     "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold_part.txt" 0
-            
+
             $SAMTOOLS faidx "$out_dir/05-furth/second_match/${refname}_ragtag/ragtag.scaffold.fasta" \
                            "${original_refname}_RagTag" > "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold.fasta"
         else
@@ -766,28 +730,25 @@ for fullname in "$out_dir/05-furth/second_match"/*.second; do
                     "$fullname" \
                     "${second}_result_cycle.txt" \
                     "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold_part.txt"
-            
+
             $PYTHON "${PYTHON_SCRIPTS[MAKE_FA_FROM_PATH]}" \
                     "${OUTPUT_FILES[assembly_fasta]}" \
                     "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold_part.txt" \
                     "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold.fasta" 1
         fi
-        
-        # Update sequence names
+
         first_line=$(head -n 1 "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold_part.txt")
         sed -i.bak "s/${original_refname}_RagTag/$first_line/g" "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold.fasta"
-        
-        # BLAST against reference
+
         $NCBI_BIN/makeblastdb -in "$out_dir/05-furth/second_match/$refname.fasta" \
                               -dbtype nucl -out "$out_dir/05-furth/second_match/$refname.fasta" &>/dev/null
-        
+
         $NCBI_BIN/blastn -query "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold.fasta" \
                          -num_threads "$threads" \
                          -out "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold.fasta.blast" \
                          -db "$out_dir/05-furth/second_match/$refname.fasta" \
                          -outfmt "6 qaccver saccver pident qlen slen length mismatch gapopen qstart qend sstart send evalue bitscore"
-        
-        # Filter by BLAST
+
         $PYTHON "${PYTHON_SCRIPTS[FILTER_BY_BLAST]}" \
                 "$out_dir/05-furth/second_match/${refname}_ragtag_scaffold.fasta.blast" \
                 "$out_dir/04-match/${prefix}_cycle_nodup.txt" \
@@ -816,20 +777,19 @@ touch "$out_dir/final_result/filtered_cycle_res_tmp.txt"
 $PYTHON "${PYTHON_SCRIPTS[FILTER_CYCLE_GENE_SCORE]}" \
         "$out_dir/04-match/${prefix}_filtered_cycle.txt" 0 \
         "${OUTPUT_FILES[hit_out]}" \
-        "${OUTPUT_FILES[node_score]}" > "$out_dir/final_result/filtered_cycle_res_tmp.txt"
+        "${OUTPUT_FILES[node_score]}" "$out_dir/final_result/filtered_cycle_res_tmp.txt"
 
 # Initialize final results
 rm -f "$out_dir/final_result/${prefix}_final_tmp.txt"
 touch "$out_dir/final_result/${prefix}_final_tmp.txt"
 
 # Compile all results
-touch "$out_dir/final_result/${prefix}_final_tmp.txt"
 if [ -f "$out_dir/final_result/filtered_cycle_res_tmp.txt" ]; then
     cat "$out_dir/final_result/filtered_cycle_res_tmp.txt" > "$out_dir/final_result/${prefix}_final_tmp.txt"
 fi
 
-# Find most common results
-if [ "$(ls -A "$out_dir/05-furth/second_match"/*_ragtag_scaffold_part.txt 2>/dev/null)" ]; then
+# Find most common results (only if we have reference-based results)
+if [ "$HAS_REFERENCES" = true ] && [ "$(ls -A "$out_dir/05-furth/second_match"/*_ragtag_scaffold_part.txt 2>/dev/null)" ]; then
     $PYTHON "${PYTHON_SCRIPTS[FIND_MOST_COMMON_RESULT]}" \
             "$out_dir/05-furth/second_match" \
             "$out_dir/05-furth/similar_ref.txt" \
@@ -844,15 +804,16 @@ fi
 # Compile before-cut results
 if [ "$(ls -A "$out_dir/05-furth/second_match"/*_all_result_before_cut.txt 2>/dev/null)" ]; then
     cat "$out_dir/05-furth/second_match"/*_all_result_before_cut.txt > "$out_dir/final_result/${prefix}_all_before_cut.txt"
+else
+    touch "$out_dir/final_result/${prefix}_all_before_cut.txt"
 fi
 
 # Final filtering
 log "INFO" "Applying final filters..."
-touch "$out_dir/final_result/${prefix}_filtered_final_tmp.txt"
-$PYTHON "${PYTHON_SCRIPTS[FILTER_CYCLE]}" \
+$PYTHON "${PYTHON_SCRIPTS[FILTER_CYCLE_GENE_SCORE]}" \
         "$out_dir/final_result/${prefix}_final_tmp.txt" 0 \
         "${OUTPUT_FILES[hit_out]}" \
-        "${OUTPUT_FILES[node_score]}" > "$out_dir/final_result/${prefix}_filtered_final_tmp.txt"
+        "${OUTPUT_FILES[node_score]}" "$out_dir/final_result/${prefix}_filtered_final_tmp.txt"
 
 # Correct duplicates and generate final output
 log "INFO" "Generating final FASTA file..."
@@ -892,6 +853,8 @@ summary_file="$out_dir/final_result/${prefix}_summary.txt"
     echo "  - FASTQ1: $fastq1"
     echo "  - FASTQ2: $fastq2"
     echo "  - Phage DB: $phagedb"
+    echo ""
+    echo "Reference sequences: $([ "$HAS_REFERENCES" = true ] && echo "Yes" || echo "No (pipeline ran without references)")"
     echo ""
     echo "Key metrics:"
     echo "  - Average sequencing depth: $first_depth"

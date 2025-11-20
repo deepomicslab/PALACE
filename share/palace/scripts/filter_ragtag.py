@@ -43,6 +43,7 @@ def process_contig_line(contig_line):
     # Reverse the list of contigs and flip the orientation
     processed_contigs = []
     for contig in contigs:
+        print(contig)
         if contig.endswith('-'):
             new_contig = contig[:-1] + '+'
         elif contig.endswith('+'):
@@ -68,6 +69,7 @@ def process_file(input_filename, output_filename, is_remain):
                 # Check if the line meets the specific conditions
                 if len(columns) >= 9 and columns[0].endswith('_RagTag') and columns[4] == 'W':
                     if preref != columns[0] and preref != "":
+                        print(preref)
                         outfile.write("\n")
                     if columns[8] == '-':
                         columns[5] = reverse_and_flip_directions(columns[5])

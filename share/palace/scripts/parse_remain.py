@@ -1,7 +1,7 @@
 import re
 import argparse
 MIN_STRICT_GENE = 5
-min_len_gene_dict = {2000:2,5000:5,10000:10,20000:20,50000:30,100000:35,200000:40,500000:50}
+min_len_gene_dict = {2000:1,5000:5,10000:10,20000:20,50000:30,100000:35,200000:40,500000:50}
 #min_len_gene_dict={2000:2,5000:5,10000:8,20000:12,100000:20,200000:35,500000:50}
 
 #def check_gene(length, gene_count, min_len_gene_dict={2000:2,5000:5,10000:8,20000:12,100000:20,200000:35,500000:50}):
@@ -26,6 +26,7 @@ min_len_gene_dict = {2000:2,5000:5,10000:10,20000:20,50000:30,100000:35,200000:4
 #
 #    # Check if the gene count is sufficient
 #    return gene_count >= required_genes
+#TODO, need a paramater to control gene desity
 def check_gene(length, gene_count, min_gene_density=1):
     """
     Check if the gene_count meets the minimum required gene density for the given sequence length.
@@ -35,11 +36,14 @@ def check_gene(length, gene_count, min_gene_density=1):
     :param min_gene_density: The minimum gene density (genes per 1000 bp).
     :return: True if gene_count meets or exceeds the required minimum, otherwise False.
     """
-    if gene_count >= 30:
+    if gene_count >= 40:
         return True
     else:
-        required_genes = min_gene_density * (length / 1000)
-    return gene_count >= required_genes
+        # 计算最低需要的基因数
+        required_genes = min_gene_density * (length / 3000)
+
+        # 判断是否满足最低基因密度
+    return gene_count >= required_genes - 1
 
 # Example usage:
 #print(check_gene(2500, 3))  # Expected: True (2500 > 2000, requires >2 genes)
@@ -217,6 +221,7 @@ if __name__ == "__main__":
     final_keeped = []
     #TODO, this invoke get_items_in_keeped 3 times, refine
     for items in results1:
+        print(items)
         gene_len,score_len,both_len,gene_score_dict,total_gene = get_items_in_keeped(items, in_gene,in_score,in_both, gene_res)
         len2 = float(get_path_len(items))
         if len2 < args.minlen:

@@ -140,8 +140,8 @@ def filter_paths(support_segs):
                     add_len += e_len
             
             # Check if path meets criteria
-            if add_len > 0 and (add_len / full_len >= 0.5 or add_len > 2000):
-                full_name_results.update(full_names)
+            #if add_len > 0 and (add_len / full_len >= 0.5 or add_len > 2000):
+            full_name_results.update(full_names)
     
     return full_name_results
 

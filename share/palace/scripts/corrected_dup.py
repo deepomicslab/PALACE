@@ -220,6 +220,9 @@ def split_fasta(edge_fasta_file, final_all_file, edge_fasta_out_file):
         for item in line_arr:
             item_dir = item[-1]
             item_len = get_seg_len(item)
+            # if "EDGE_15885170_length_4248_cov_3.183878" in item:
+                # #print(item, item_dir, item_len, prev_len)
+            # # #print(item, item_len, prev_len, item_len + prev_len, "lenlen")
             item_fa = edge_fasta[edge_fasta_key][prev_len:item_len + prev_len]
             if item_dir == "-":
                 item_fa_rev = item_fa.reverse.complement
@@ -273,6 +276,7 @@ def get_contig_len_for_arr(lst):
         final_len = final_len + get_seg_len(item)
     return final_len
 def push_back_cycle_copies(unit_cycles, unit_copies, line_arr, first_item_copy):
+    #print(unit_cycles, unit_copies, "push back")
     for i in range(len(unit_cycles)):
         unit_item = unit_cycles[i] + unit_cycles[i]
         unit_copy = unit_copies[i]
@@ -280,6 +284,7 @@ def push_back_cycle_copies(unit_cycles, unit_copies, line_arr, first_item_copy):
         if unit_copy < 1:
             unit_copy = 1
         start_idx, end_idx = find_sublist_indexes(unit_item, line_arr)
+        #print(start_idx, end_idx, "idx")
         line_arr = line_arr[:start_idx] + unit_cycles[i] * unit_copy + line_arr[end_idx:]
     # check copy split cycle
     first_item_count_in_liner_arr = count_item_ignor_direction(line_arr, line_arr[0])
@@ -312,12 +317,20 @@ def filter_cycle(cycle_file, cycle_out_file,bam):
         line_arr = reformat_cycle(line_arr)
         # the first item is the most occurrences  element
         first_item = line_arr[0]
+        #print("refo", line_arr)
         unit_cycles = find_consecutive_repeats(line_arr)
         #print("cycles",unit_cycles)
         non_unit_part = non_dup_item(line_arr, unit_cycles)
         unit_copies, first_item_copy = get_depth(set(line_arr),unit_cycles, non_unit_part ,bam, first_item)
+        #print(unit_copies, "ccccccccccc")
+        # remove_duplicated_arr =  remove_dup_record(line_arr)
+        # if sorted(remove_duplicated_arr) != sorted(line_arr):
+        #     #print(line_count, "dup change")
         corrected_line_arr = push_back_cycle_copies(unit_cycles, unit_copies, line_arr, first_item_copy)
         tmp_result.append(corrected_line_arr)
+    # #print(tmp_result, "tmp_result")
+    # for records, keep the longest cycle result, like: abadc and abadec, will keep abadec.
+    # tmp_result = sorted(tmp_result, key=len, reverse=True)
     keeped_idx = set(range(0, len(tmp_result)))
     for i in range(0, len(tmp_result)):
         if i not in keeped_idx:
@@ -329,16 +342,22 @@ def filter_cycle(cycle_file, cycle_out_file,bam):
                 continue
             similar, idx = is_similar(tmp_result[i], tmp_result[j])
             if similar:
+                # #print(i,j,"ij")
+                # #print(keeped_idx, "keeped_idx")
                 if idx == 0:
+                    # #print(j,"j")
                     keeped_idx.remove(j)
+                    #print(j + 1, "deleted")
                 else:
                     keeped_idx.remove(i)
+                    #print(i + 1, "deleted")
                     break
     final_result = [tmp_result[i] for i in keeped_idx]
     for row in final_result:
         line = ' '.join(str(elem) for elem in row) + '\n'
         cycle_out.write(line)
     cycle_out.close()
+    # # #print(final_result)
     return line_count, final_result, ori_cycle_result
 
 # if lst1 contains lst2 ignore the order
@@ -372,6 +391,7 @@ def is_similar(lst1, lst2):
 
 def remove_dup_record2(lst):
     input_list = lst + [lst[0]]
+    # #print(input_list, "input list")
     cycles = []
     final_cycles = []
     n = len(input_list)
@@ -384,9 +404,12 @@ def remove_dup_record2(lst):
                     cycle = input_list[i:j]
                     cycles.append(cycle)
     cycles = sorted(cycles, key=len, reverse=True)
+    # #print(cycles, "cycles")
     unit_cycle_idx = set(range(0, len(cycles)))
+    # #print(unit_cycle_idx, "unit")
     for i in range(0,len(cycles)):
         c1 = cycles[i]
+        # #print(c1)
         for j in range(i,len(cycles)):
             if j == i:
                 continue
@@ -394,7 +417,9 @@ def remove_dup_record2(lst):
             if contains_sublist(c1, c2):
                 unit_cycle_idx.remove(i)
                 break
+    # #print(unit_cycle_idx, "unit")
     final_cycles = [cycles[i] for i in unit_cycle_idx]
+    # #print(final_cycles, "final_cycles")
     result = []
     for item in final_cycles:
         result = result + item[:-1]
@@ -467,6 +492,8 @@ def filter_final(final_all_file, cycle_count, cycle_result, ori_cycle_result, be
                 continue
             similar, idx = is_similar(tmp_result[i], tmp_result[j])
             if similar:
+                # #print(i,j,"ij")
+                # #print(keeped_idx, "keeped_idx")
                 if idx == 0:
                     # #print(j,"j")
                     keeped_idx.remove(j)
@@ -481,13 +508,24 @@ def filter_final(final_all_file, cycle_count, cycle_result, ori_cycle_result, be
     final_result_cycle = []
     final_result_uncycle = []
     for item in final_result:
+        print(item,"======")
         if item in cycle_result:
             final_result_cycle.append(item)
+            print(item,"11111111111")
         else:
+            #print(before_cut_dict_swap.keys())
+            print(item,"000000000000000")
             if "\t".join(item) in before_cut_dict_swap.keys():
+                print(item,"2222222222222")
+                print(before_cut_dict_swap["\t".join(item)].split("\t"),"vvvvvvvvvvv")
                 final_result_uncycle.append(before_cut_dict_swap["\t".join(item)].split("\t"))
             else:
+                print(item,"33333333")
                 final_result_uncycle.append(item)
+    # print(cycle_result,"cc")
+    # print(final_result,"bb")
+    # print(final_result_cycle,"dd")
+    # print(final_result_uncycle,"ee")
     return len(final_result_cycle), final_result_cycle+final_result_uncycle
 
 def remove_dup_record(lst):
@@ -582,10 +620,12 @@ if __name__ == "__main__":
 
     # remove_dup for final.txt
     final_cycle_count, filtered_final_results = filter_final(final_all_file, cycle_count, cycle_result, ori_cycle_result, before_cut_dict)
+    #print(final_cycle_count,"count")
     with open(filtered_final_all_file, "w") as filtered_final_all:
         for item in filtered_final_results:
             if get_path_len(item) > min_len:
                 filtered_final_all.write("\t".join(item) + "\n")
+    # # #print(filtered_final_results,len(filtered_final_results), "filtered_final_result")
 
     #make new fa
     make_fa_from_order(edge_fasta,filtered_final_all_file,filtered_final_fa,prefix,final_cycle_count)

@@ -501,6 +501,12 @@ def parse_blast(blast_file):
     }
     for subject_id in updated_data:
         updated_data[subject_id].sort()
+    # Output the sorted order of query contigs for each reference
+    # for subject_id, alignments in reference_dict.items():
+    #     print(f"Reference: {subject_id}")
+    #     for alignment in alignments:
+    #         s_start, s_end, query_id = alignment
+    #         print(f"Query contig: {query_id}, Position: {s_start}-{s_end}")
     return updated_data
 def parse_files(data_file_path):
     contig_dict = {}
