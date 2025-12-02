@@ -374,7 +374,7 @@ if ! check_skip_step "${OUTPUT_FILES[first_bam]}.bai" "Alignment"; then
     fi
     
     # Index BAM
-    $SAMTOOLS index -@ "$threads" "${OUTPUT_FILES[first_bam]}"
+    $SAMTOOLS index "${OUTPUT_FILES[first_bam]}"
     handle_error $? "BAM indexing failed"
 fi
 
@@ -482,7 +482,7 @@ fi
 if ! check_skip_step "${OUTPUT_FILES[first_bam]}.depth.gz" "Depth calculation"; then
     log "INFO" "Calculating coverage depth..."
 
-    $SAMTOOLS depth --threads "$threads" "${OUTPUT_FILES[first_bam]}" > "${OUTPUT_FILES[first_bam]}.depth"
+    $SAMTOOLS depth "${OUTPUT_FILES[first_bam]}" > "${OUTPUT_FILES[first_bam]}.depth"
     first_depth=$(awk '{sum+=$3} END { print sum/NR }' "${OUTPUT_FILES[first_bam]}.depth")
     /gpfs1/home/gzpan2/mambaforge/envs/phispy/bin/bgzip -f "${OUTPUT_FILES[first_bam]}.depth"
     /gpfs1/home/gzpan2/mambaforge/envs/phispy/bin/tabix -f -s 1 -b 2 -e 2 "${OUTPUT_FILES[first_bam]}.depth.gz"
