@@ -14,6 +14,7 @@ cdef str _num_transfer(str seq):
 
 cdef list _num_transfer_loc(str num_seq, int K):
     cdef list loc
+    cdef int i
     loc = []
     for i in range(0, len(num_seq)-K+1):
         loc.append(int(num_seq[i:i+K], 4))
@@ -23,8 +24,13 @@ cdef list _num_transfer_loc(str num_seq, int K):
 cdef np.ndarray[np.float64_t, ndim=1] _loc_transfer_matrix(list loc_list, int dis, int K):
     cdef np.ndarray[np.float64_t, ndim=2] matrix
     cdef np.ndarray[np.float64_t, ndim=1] new_matrix
-    matrix = np.zeros((4**K, 4**K))
-    for i in range(0, len(loc_list)-K-dis):
+    cdef int i
+    cdef int range_end
+    cdef int matrix_size
+    matrix_size = 1 << (2*K)  # 4^K = 2^(2*K)
+    matrix = np.zeros((matrix_size, matrix_size))
+    range_end = len(loc_list) - K - dis
+    for i in range(0, range_end):
         matrix[loc_list[i]][loc_list[i+K+dis]] += 1
 
     new_matrix = matrix.flatten()
