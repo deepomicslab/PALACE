@@ -3,16 +3,67 @@ set -euo pipefail
 
 #######################################################################################
 # PALACE Pipeline - Phage Assembly and Analysis
-# 
-# Description: This pipeline performs phage genome assembly and analysis from 
-#              paired-end sequencing data
 #
-# Usage: ./palace_pipeline.sh <config_file>
-#
-# Author: [Your Name]
-# Version: 2.0
-# Date: 2025
-# This version fix the empty phage ref bug
+# Usage: ./palace_pipeline.sh --config <config_file>
+#        ./palace_pipeline.sh --help
+#######################################################################################
+
+print_usage() {
+  cat <<EOF
+PALACE Pipeline - Phage Assembly and Analysis
+
+Usage:
+  $(basename "$0") --config <config_file>
+  $(basename "$0") --help
+
+Options:
+  --config    Path to configuration file (required)
+  --help      Show this help message and exit
+
+If no options are given, this help message is printed.
+EOF
+}
+
+# ------------------------------------------------------------------------------
+# Parse command‐line arguments
+# ------------------------------------------------------------------------------
+if [ $# -eq 0 ]; then
+  print_usage
+  exit 1
+fi
+
+config_file=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --config)
+      if [ -n "${2-}" ] && [[ ! "$2" =~ ^-- ]]; then
+        config_file=$2
+        shift 2
+      else
+        echo "Error: --config requires a file path argument"
+        print_usage
+        exit 1
+      fi
+      ;;
+    --help|-h)
+      print_usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1"
+      print_usage
+      exit 1
+      ;;
+  esac
+done
+
+# Ensure we got a config file
+if [ -z "$config_file" ]; then
+  echo "Error: --config <config_file> is required"
+  print_usage
+  exit 1
+fi
+
 #######################################################################################
 
 # Color codes for logging
@@ -36,7 +87,7 @@ log() {
     local level=$1
     shift
     local message="$@"
-    
+
     case $level in
         "INFO")
             echo -e "${BLUE}[$(print_time)] [INFO]${NC} $message"
@@ -89,7 +140,7 @@ dir_exists_with_content() {
 check_skip_step() {
     local output_file=$1
     local step_name=$2
-    
+
     if file_exists_with_content "$output_file"; then
         log "WARNING" "Output file $output_file already exists. Skipping $step_name"
         return 0
@@ -101,7 +152,7 @@ check_skip_step() {
 handle_error() {
     local exit_code=$1
     local error_message=$2
-    
+
     if [ $exit_code -ne 0 ]; then
         log "ERROR" "$error_message (Exit code: $exit_code)"
         exit $exit_code
@@ -113,25 +164,16 @@ show_progress() {
     local current=$1
     local total=$2
     local step_name=$3
-    
+
     local percent=$((current * 100 / total))
     log "INFO" "Progress: Step $current/$total ($percent%) - $step_name"
 }
 
-#######################################################################################
-# CONFIGURATION PARSING
-#######################################################################################
+# ------------------------------------------------------------------------------
+# Now proceed with the rest of your script, using $config_file in place of $1
+# ------------------------------------------------------------------------------
 
 log "INFO" "=== PALACE Pipeline Starting ==="
-
-# Check if config file is provided
-if [ $# -eq 0 ]; then
-    log "ERROR" "No configuration file provided"
-    echo "Usage: $0 <config_file>"
-    exit 1
-fi
-
-config_file=$1
 
 # Check if config file exists
 if [ ! -f "$config_file" ]; then
@@ -145,14 +187,14 @@ log "INFO" "Reading configuration from: $config_file"
 while IFS='=' read -r key value; do
     # Skip comments and empty lines
     [[ "$key" =~ ^\#.* ]] || [[ -z "$key" ]] && continue
-    
+
     # Clean key and value
     key=$(echo "$key" | tr '.' '_' | xargs)
     value=$(echo "$value" | xargs)
-    
+
     # Set variable
     eval "${key}='${value}'"
-    
+
     # Log important configurations
     case $key in
         fastq1|fastq2|phagedb|out_dir|prefix|threads|PALACE)
@@ -161,14 +203,20 @@ while IFS='=' read -r key value; do
     esac
 done < "$config_file"
 
+if [ -z "${ENV_PREFIX-}" ]; then
+    ENV_PREFIX="${CONDA_PREFIX-}"
+    log "WARNING" "ENV_PREFIX unset, use the current CONDA_PREFIX: $ENV_PREFIX"
+else
+    log "INFO" "  ENV_PREFIX = $ENV_PREFIX"
+fi
+
+
 #######################################################################################
 # VALIDATE CONFIGURATION VARIABLES
 #######################################################################################
 
 # Check if essential variables are defined
-essential_vars=("fastq1" "fastq2" "phagedb" "protein_db" "gcn_model" "out_dir" "prefix" "threads" 
-                "PYTHON" "BWA" "SAMTOOLS" "FASTP" "SPADES" "NCBI_BIN" "PALACE" "RAGTAG")
-
+essential_vars=("fastq1" "fastq2" "phagedb" "protein_db" "gcn_model" "out_dir" "prefix" "threads")
 for var in "${essential_vars[@]}"; do
     if [ -z "${!var:-}" ]; then
         log "ERROR" "Required variable '$var' is not defined in config file"
@@ -179,12 +227,19 @@ done
 #######################################################################################
 # SETUP PATHS (After configuration is loaded)
 #######################################################################################
+PYTHON=$ENV_PREFIX/bin/python
+BWA=$ENV_PREFIX/bin/bwa
+SAMTOOLS=$ENV_PREFIX/bin/samtools
+FASTP=$ENV_PREFIX/bin/fastp
+SPADES=$ENV_PREFIX/bin/spades.py
+NCBI_BIN=$ENV_PREFIX/bin
+RAGTAG=$ENV_PREFIX/bin/ragtag.py
 
 # Now we can safely use $PALACE since it's been loaded from config
-SCRIPTS="$PALACE/scripts"
-MATCHING="$PALACE/build/matching"
-GENERATE_GRAPH="$PALACE/build/glinyu"
-EXTRACT_REF="$PALACE/build/eref"
+SCRIPTS="$ENV_PREFIX/share/palace/scripts"
+MATCHING="$ENV_PREFIX/bin/matching"
+GENERATE_GRAPH="$ENV_PREFIX/bin/generateGraph"
+EXTRACT_REF="$ENV_PREFIX/bin/eref"
 
 # Define all Python scripts
 declare -A PYTHON_SCRIPTS=(
