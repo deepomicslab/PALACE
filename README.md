@@ -4,7 +4,7 @@ PALACE is a computational framework based on deep learning models and conjugate 
 ![image](https://github.com/deepomicslab/PALACE/blob/main/pipeline.png)
  
 ## Installation
-### Approach 1, install with mamba/conda.(Recommended)
+### Install with mamba/conda.(Recommended)
 ```
 conda create -n palace_env python=3.8
 conda activate palace_env
