@@ -84,7 +84,7 @@ python setup.py build_ext --inplace
 1. Config the config.txt file, [here](https://github.com/deepomicslab/PALACE/tree/release_v1/config/config.txt) is a demo file.  
 * ```fastq1```, Read1 paired fastq file.
 * ```fastq2```, Read2 paired fastq file.
-* ```phagedb```, Phage reference database; the latest phage reference database can be download from [with DTR Ref](https://portland-my.sharepoint.com/:u:/g/personal/gzpan2-c_my_cityu_edu_hk/IQAjoyhAE9lHSIHffTNW5BjLAagl_B_siKm_mjlu_7fmNh8?e=KRVeRE)/[without DTR Ref](https://portland-my.sharepoint.com/:f:/g/personal/gzpan2-c_my_cityu_edu_hk/Emb32qBmId5EmNxhJKNEIscBD6t9gsWdNit9D_Dd9fArUw?e=tuNWbd).
+* ```phagedb```, Phage reference database; the latest phage reference database can be download from [without DTR Ref](https://portland-my.sharepoint.com/:u:/g/personal/gzpan2-c_my_cityu_edu_hk/IQCDibHMGsZ4Q7SGZt7C-iiPAT_KTQvRWbiwYqj26JC65lQ?e=vbRnDF)/[with checkV Ref](https://portland-my.sharepoint.com/:u:/g/personal/gzpan2-c_my_cityu_edu_hk/IQAjoyhAE9lHSIHffTNW5BjLAagl_B_siKm_mjlu_7fmNh8?e=KRVeRE).
 * ```protein_db```, Phage protein database; the latest phage protein database can be download from [here](https://portland-my.sharepoint.com/:u:/g/personal/gzpan2-c_my_cityu_edu_hk/IQD1bs4pZoaJRIpgjou26xA_AUx_Q26GBTfTywWel2bHq9A?e=UJBZCQ).
 *```gcn_model```, Deeplearning model for phage contigs predict; can be download from [here](https://portland-my.sharepoint.com/:u:/g/personal/gzpan2-c_my_cityu_edu_hk/EcgNImBdl9dBnS8Qza0U930B3ENSDDh5EeAZoSkX95VtHQ?e=E1SK0y)
 * ```threads```, Threads to be used.
