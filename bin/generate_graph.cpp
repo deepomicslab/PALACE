@@ -15,45 +15,43 @@
 #include <set>
 
 // ===============================================================================
-// 参数配置
-// ===============================================================================
 
-// 定义 contig 的端点区域：距离端点多远算作 START/END 区域
-static int MAX_END = 1000;
+// Define contig endpoint regions: distance from endpoints to be counted as START/END regions
+static int MAX_END = 300;
 
-// 质量过滤参数
-static int MIN_MAPQ = 20;           // 最小比对质量
-static int MAX_NM = 5;              // 最大错配数
-static double MIN_MATCH_FRAC = 0.70; // 最小匹配比例（匹配碱基数/参考长度）
+// Quality filtering parameters
+static int MIN_MAPQ = 0;           // Minimum mapping quality
+static int MAX_NM = 5;              // Maximum mismatches allowed
+static double MIN_MATCH_FRAC = 0; // Minimum match fraction (matched bases / reference length)
 
-// 是否启用配对末端证据
+// Enable paired-end evidence
 static bool ENABLE_PAIRED = true;
 
-// 最大跨度比例：read 距离端点的距离不能超过 contig 长度的这个比例
+// Maximum span ratio: read distance from endpoint cannot exceed this fraction of contig length
 static double MAX_SPAN_FRAC = 0.80;
 
-// 是否输出两种顺序的连接（A->B 和 B->A）
+// Output both orders of connections (A->B and B->A)
 static bool OUTPUT_BOTH_ORDER = false;
 
-// 测序文库类型：FR (forward-reverse), RF (reverse-forward), FF (forward-forward)
+// Sequencing library type: FR (forward-reverse), RF (reverse-forward), FF (forward-forward)
 static std::string LIB_TYPE = "FR";
 
-// 输出过滤参数
-static int MIN_COUNT = 1;           // 最小支持 reads 数
-static double MIN_SCORE = 0.0;      // 最小累积分数
+// Output filtering parameters
+static int MIN_COUNT = 5;           // Minimum supporting reads count
+static double MIN_SCORE = 0.0;      // Minimum cumulative score
 
-// 调试模式开关
+// Debug mode switch
 static bool DEBUG_MODE = false;
 
 // ===============================================================================
-// Contig 区域定义
+// Contig region definition
 // ===============================================================================
 
-// 定义 contig 的三个区域：起始端、末尾端、中间
+// Define three contig regions: start, end, middle
 enum ContigRegion { START=0, END=1, MIDDLE=2 };
 
 /**
- * 判断给定位置在 contig 的哪个区域
+ * Determine which region a given position belongs to in the contig
  */
 static inline ContigRegion getContigRegion(int pos1, int contigLen){
     int pref = std::min(MAX_END, contigLen/2);
@@ -64,21 +62,21 @@ static inline ContigRegion getContigRegion(int pos1, int contigLen){
 }
 
 /**
- * 计算位置到 contig 起始端的距离
+ * Calculate distance from position to contig start
  */
 static inline int distToStart(int pos){
     return std::max(0, pos - 1);
 }
 
 /**
- * 计算位置到 contig 末尾端的距离
+ * Calculate distance from position to contig end
  */
 static inline int distToEnd(int pos, int L){
     return std::max(0, L - pos);
 }
 
 /**
- * 翻转区域：START <-> END，MIDDLE 保持不变
+ * Flip region: START <-> END, MIDDLE remains unchanged
  */
 static inline ContigRegion flipRegion(ContigRegion r){
     if(r == START) return END;
@@ -87,7 +85,7 @@ static inline ContigRegion flipRegion(ContigRegion r){
 }
 
 /**
- * 去除字符串首尾空白
+ * Trim whitespace from both ends of string
  */
 static inline void trim(std::string& s){
     size_t i = 0;
@@ -98,7 +96,7 @@ static inline void trim(std::string& s){
 }
 
 // ===============================================================================
-// FastG 连接关系数据结构
+// FastG connection relationship data structure
 // ===============================================================================
 
 struct ContigPair {
@@ -116,7 +114,7 @@ struct ContigPair {
 };
 
 /**
- * 解析 FastG FAI 文件，获取预期的 contig 连接关系
+ * Parse FastG FAI file to get expected contig connections
  */
 static std::set<ContigPair> parseFastgFile(const std::string& filename) {
     std::ifstream inFile(filename);
@@ -130,25 +128,25 @@ static std::set<ContigPair> parseFastgFile(const std::string& filename) {
         std::stringstream ss2(fullName);
         std::getline(ss2, contigName, ':');
 
-        // 判断当前 contig 的方向
+        // Determine orientation of current contig
         bool contigReversed = false;
         if (!contigName.empty() && contigName.back() == '\'') {
             contigReversed = true;
             contigName.pop_back();
         }
 
-        // 读取连接的 contigs
+        // Read connected contigs
         while (std::getline(ss2, linkedContig, ',')) {
             if (linkedContig.empty()) continue;
 
-            // 判断连接 contig 的方向
+            // Determine orientation of linked contig
             bool linkedReversed = false;
             if (linkedContig.back() == '\'') {
                 linkedReversed = true;
                 linkedContig.pop_back();
             }
 
-            // 计算方向
+            // Calculate orientations
             char orient1, orient2;
             if (!contigReversed) {
                 orient1 = '+';
@@ -171,7 +169,7 @@ static std::set<ContigPair> parseFastgFile(const std::string& filename) {
 }
 
 // ===============================================================================
-// SA (Supplementary Alignment) 标签解析
+// SA (Supplementary Alignment) tag parsing
 // ===============================================================================
 
 struct SAItem {
@@ -208,7 +206,7 @@ static SAItem parseSAItem(const std::string& item){
 }
 
 // ===============================================================================
-// CIGAR 字符串处理
+// CIGAR string processing
 // ===============================================================================
 
 static int cigarRefLen(const std::string& cigar){
@@ -242,7 +240,7 @@ static int cigarMatchLen(const std::string& cigar){
 }
 
 // ===============================================================================
-// 过滤和评分函数
+// Filtering and scoring functions
 // ===============================================================================
 
 static inline bool passMapqNm(int mapq, int nm){
@@ -261,8 +259,6 @@ static inline double endWeight(int d1, int d2){
     return w1 * w2;
 }
 
-// ===============================================================================
-// 数据结构
 // ===============================================================================
 
 struct Evidence {
@@ -302,15 +298,13 @@ struct ReadInfo {
 };
 
 struct AggStats {
-    int supplementCount = 0;        // supplement reads 计数（支持 fastg）
-    int spanCount = 0;              // span read pairs 计数（支持 fastg）
-    int supplementCountNoFastg = 0; // supplement reads 计数（不支持 fastg）
-    int spanCountNoFastg = 0;       // span read pairs 计数（不支持 fastg）
+    int supplementCount = 0;        // supplement reads
+    int spanCount = 0;              // span read pairs
+    int supplementCountNoFastg = 0; // supplement reads
+    int spanCountNoFastg = 0;       // span read pairs
     std::vector<ReadInfo> supportingReads;
 };
 
-// ===============================================================================
-// 计算距离
 // ===============================================================================
 
 static void nearEndDistances(ContigRegion regL, int posL, int LL, char oL,
@@ -323,8 +317,6 @@ static void nearEndDistances(ContigRegion regL, int posL, int LL, char oL,
     dNearR = (gRegR == START) ? distToStart(posR) : distToEnd(posR, LR);
 }
 
-// ===============================================================================
-// CIGAR 区间解析
 // ===============================================================================
 
 struct ReadInterval {
@@ -405,8 +397,6 @@ static int getReadLength(bam1_t* b) {
 }
 
 // ===============================================================================
-// 拼接检查
-// ===============================================================================
 
 static bool canStitchReadIntervals(const ReadInterval& interval1, const ReadInterval& interval2,
                                    int maxGap, int maxOverlap, bool& first1) {
@@ -437,8 +427,6 @@ static bool canStitchReadIntervals(const ReadInterval& interval1, const ReadInte
     return false;
 }
 
-// ===============================================================================
-// 计算分数
 // ===============================================================================
 
 static bool computeLayoutScore(const Evidence& ev, bool leftIsA, char oL, char oR,
@@ -472,8 +460,6 @@ static bool computeLayoutScore(const Evidence& ev, bool leftIsA, char oL, char o
     return (scoreOut > 0.0);
 }
 
-// ===============================================================================
-// 配对末端检查
 // ===============================================================================
 
 static bool checkPairedEndLayout(int pos1, bool rev1, ContigRegion reg1, int L1,
@@ -520,8 +506,6 @@ static bool checkPairedEndLayout(int pos1, bool rev1, ContigRegion reg1, int L1,
 }
 
 // ===============================================================================
-// Split-read 检查
-// ===============================================================================
 
 static bool checkSplitReadLayout(int pos1, bool rev1, ContigRegion reg1, int L1,
                                  int pos2, bool rev2, ContigRegion reg2, int L2,
@@ -554,8 +538,6 @@ static bool checkSplitReadLayout(int pos1, bool rev1, ContigRegion reg1, int L1,
 }
 
 // ===============================================================================
-// 命令行帮助
-// ===============================================================================
 
 static void usage(const char* prog){
     std::cerr << "Usage: " << prog << " [options] <BAM> <FASTG_FAI> <OUT> <AverageDepth>\n";
@@ -573,8 +555,6 @@ static void usage(const char* prog){
     std::cerr << "  --debug                   Enable debug output\n";
 }
 
-// ===============================================================================
-// 主程序
 // ===============================================================================
 
 int main(int argc, char** argv){
@@ -622,7 +602,6 @@ int main(int argc, char** argv){
     const char* outPath = argv[optind+2];
     double avgDepth = std::atof(argv[optind+3]);
 
-    // 解析 FastG FAI 文件
     std::set<ContigPair> fastgPairs = parseFastgFile(fastgFaiPath);
 
     if(DEBUG_MODE) {
@@ -661,8 +640,6 @@ int main(int argc, char** argv){
     //};
 
     // ===============================================================================
-    // 遍历 BAM 文件
-    // ===============================================================================
 
     while(sam_read1(in, hdr, b) >= 0){
         const uint16_t f = b->core.flag;
@@ -700,10 +677,8 @@ int main(int argc, char** argv){
         }
 
         if(!passMapqNm(main_mapq, main_nm)) continue;
-        if(!passMatchFrac(matchLen1, std::max(1, refLen1))) continue;
+//if(!passMatchFrac(matchLen1, std::max(1, refLen1))) continue;
 
-        // ===============================================================================
-        // 处理 split-read 证据（优先处理）
         // ===============================================================================
 
         uint8_t* saTag = bam_aux_get(b, "SA");
@@ -750,7 +725,6 @@ int main(int argc, char** argv){
 
                 int refLen2 = cigarRefLen(it.cigar);
                 int matchLen2 = cigarMatchLen(it.cigar);
-                if(!passMatchFrac(matchLen2, std::max(1, refLen2))) continue;
 
                 std::string r2 = it.rname;
 
@@ -886,7 +860,6 @@ int main(int argc, char** argv){
                         key = LayoutKey(cL, newOL, cR, newOR);
                     }
 
-                    // 检查该连接是否在 fastg 预期中
                     ContigPair checkPair{cL, cR, oL_found, oR_found};
                     bool inFastg = (fastgPairs.find(checkPair) != fastgPairs.end());
 
@@ -909,8 +882,6 @@ int main(int argc, char** argv){
             processedSupplementReads.insert(readName);
         }
 
-        // ===============================================================================
-        // 处理配对末端证据
         // ===============================================================================
 
         if(!hasSupplementEvidence && ENABLE_PAIRED && (f & BAM_FPAIRED) &&
@@ -1025,7 +996,6 @@ int main(int argc, char** argv){
                             key = LayoutKey(cL, newOL, cR, newOR);
                         }
 
-                        // 检查该连接是否在 fastg 预期中
                         ContigPair checkPair{cL, cR, oL_found, oR_found};
                         bool inFastg = (fastgPairs.find(checkPair) != fastgPairs.end());
 
@@ -1044,8 +1014,6 @@ int main(int argc, char** argv){
         }
     }
 
-    // ===============================================================================
-    // 深度计算
     // ===============================================================================
 
     std::map<std::string, std::pair<double, int>> seg;
@@ -1070,8 +1038,6 @@ int main(int argc, char** argv){
     sam_close(in);
 
     // ===============================================================================
-    // 输出结果
-    // ===============================================================================
 
     std::ofstream out(outPath);
     if(!out){
@@ -1087,23 +1053,18 @@ int main(int argc, char** argv){
         const auto &lk = kv.first;
         const auto &S = kv.second;
 
-        // 至少要有一种证据
         if(S.supplementCount == 0 && S.spanCount == 0 &&
            S.supplementCountNoFastg == 0 && S.spanCountNoFastg == 0) continue;
 
-        // 应用最小计数过滤（总数）
         int totalCount = S.supplementCount + S.spanCount +
                          S.supplementCountNoFastg + S.spanCountNoFastg;
         if(totalCount < MIN_COUNT) continue;
 
-        // 输出格式: JUNC left oL right oR supplementCount spanCount
-        // 这里输出两个数字：支持 fastg 的计数 和 不支持 fastg 的计数
         out << "JUNC " << lk.left << " " << lk.oL << " "
             << lk.right << " " << lk.oR << " "
             << (S.supplementCount + S.spanCount + S.supplementCountNoFastg) << " "
             << (S.spanCountNoFastg);
 
-        // 只在 DEBUG 模式下输出 reads 列表
         if(DEBUG_MODE) {
             out << " READS:";
             for(const auto& rinfo : S.supportingReads){

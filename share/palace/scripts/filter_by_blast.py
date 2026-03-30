@@ -218,7 +218,7 @@ def main():
                 if line_len >= 10000:
                     liner = line.replace("cycle","").replace("score","").replace("self","").replace("gene","")
                     res.add(liner.strip("\n"))
-# 生成需要第二步match的文件： format: res \t ref
+# Generate file for second step matching: format: res \t ref
 
     title_contig = {}
     ref_contig_l = {}
@@ -385,28 +385,6 @@ def main():
                         break
                 if flag:
                     similar_array.append([fk,sk])
-                    # else:
-
-                # min_diff_ref_with_contig = 1
-                # min_ref = ""i
-                # for ref in contig_ref[fk]:
-                #     if math.abs(1-ref_list[ref]/sum(a)) >
-                # pass
-                # print(sum(tmp) / sum(a), sum(tmp) / sum(b))
-                # count = count + 1
-                # flag = False
-                # print(fk,"----------",sk,"duplicate",tmp)
-                # replace[fk] = sk
-                # replace[sk] = fk
-                # if sum(b) < sum(a):
-                #     if sk not in result:
-                #         result.append(sk)
-                #     skip.append(fk)
-                # else:
-                #     if fk not in result:
-                #         result.append(fk)
-                #     skip.append(sk)
-            # else:
 
         if oflag:
             similar_array.append([fk])

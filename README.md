@@ -1,19 +1,19 @@
 # PALACE
-PALACE is a computational framework based on deep learning models and conjugate graph theory to assemble high-quality and confident phage genomes from metagenomic sequencing data. PALACE currently supports standard pair-end reads. The assembled phages genomes analyzed in the manuscript are available at [Microsoft cloud](https://portland-my.sharepoint.com/:f:/g/personal/gzpan2-c_my_cityu_edu_hk/IgCJG3BWpjfBSLTWsObX3FmTAQtbkn4-jQ3Jqr7aj8P4ffQ?e=CPVDlm).
+PALACE is a computational framework based on deep learning models and conjugate graph theory to assemble high-quality and confident phage genomes from metagenomic sequencing data. PALACE currently supports normal pair-end reads, Oxford Nanopore(ONT) and PacBio SMRT(PB) reads. The assembled phages genomes analyzed in the manuscript are available at [Google Drive](https://drive.google.com/drive/folders/1IN_HbWpjdS4Dhjpir5h_5EY52TDFSrpR?usp=sharing).
  
 ![image](https://github.com/deepomicslab/PALACE/blob/main/pipeline.png)
  
 ## Installation
-### Install with mamba/conda.(Recommended)
+### Approach 1, install with mamba/conda.(Recommended)
 ```
-conda create -n palace_env python=3.8
+conda create -n palace_env
 conda activate palace_env
-conda install -c delta2cityu -c pytorch -c bioconda -c conda-forge palace
+conda install -c bioconda palace
 or
 #mamba is recommended
-mamba create -n palace_env python=3.8
+mamba create -n palace_env
 mamba activate palace_env
-mamba install -c delta2cityu -c pytorch -c bioconda -c conda-forge palace
+mamba install -c bioconda palace
 ```
 <!-- 1. Clone the repository and enter the directory:
 
@@ -24,12 +24,12 @@ cd ./PALACE
 2. Create a conda environment with all dependencies and enter the environment:
 ```
 mamba env create --prefix=./PALACE -f environment.yml  
-mamba activate ./PALACE
+mamba activate ./PALACE  
 Or
 conda env create --prefix=./PALACE -f environment.yml  
-conda activate ./PALACE
+conda activate ./PALACE  
 ```
-3. Create a build directory and compile PALACE under it:
+3. Create a build directory and compile PALACE under it (use **sudo**, if required):
 
 ```
 cd seqGraph_phage/
@@ -39,8 +39,7 @@ chmod u+x ./matching
 cd ../scripts/
 python setup.py build_ext --inplace
 ``` -->
-
-<!-- ### Approach 2, from scratch
+### Approach 2, from scratch
 ### Prerequisites
 ### Python packages
 * pysam==0.17.0
@@ -79,20 +78,21 @@ chmod u+x ./*
 cd ../share/palace/scripts/
 python setup.py build_ext --inplace
 ```
--->
+
 ## Using PALACE
-1. Config the config.txt file, [here](https://github.com/deepomicslab/PALACE/tree/release_v1/config/config.txt) is a demo file.  
+1. Config the config.txt file, [here](https://github.com/deepomicslab/PALACE/tree/release_branch/config/config.txt) is a demo file.  
 * ```fastq1```, Read1 paired fastq file.
 * ```fastq2```, Read2 paired fastq file.
-* ```phagedb```, Phage reference database; the latest phage reference database can be download from [without DTR Ref](https://portland-my.sharepoint.com/:u:/g/personal/gzpan2-c_my_cityu_edu_hk/IQCDibHMGsZ4Q7SGZt7C-iiPAT_KTQvRWbiwYqj26JC65lQ?e=vbRnDF)/[with checkV Ref](https://portland-my.sharepoint.com/:u:/g/personal/gzpan2-c_my_cityu_edu_hk/IQAjoyhAE9lHSIHffTNW5BjLAagl_B_siKm_mjlu_7fmNh8?e=KRVeRE).
-* ```protein_db```, Phage protein database; the latest phage protein database can be download from [here](https://portland-my.sharepoint.com/:u:/g/personal/gzpan2-c_my_cityu_edu_hk/IQD1bs4pZoaJRIpgjou26xA_AUx_Q26GBTfTywWel2bHq9A?e=UJBZCQ).
+* ```phagedb```, Phage reference database; the latest phage reference database can be download from [here](https://portland-my.sharepoint.com/:f:/g/personal/gzpan2-c_my_cityu_edu_hk/Emb32qBmId5EmNxhJKNEIscBD6t9gsWdNit9D_Dd9fArUw?e=tuNWbd).
+* ```protein_db```, Phage protein database; the latest phage protein database can be download from [here](https://portland-my.sharepoint.com/:f:/g/personal/gzpan2-c_my_cityu_edu_hk/EpVA0ISAp4FBrclyldwpjEwBBHujF4zG2Gu3Vxa5AZICJw?e=5z2qUe).
 *```gcn_model```, Deeplearning model for phage contigs predict; can be download from [here](https://portland-my.sharepoint.com/:u:/g/personal/gzpan2-c_my_cityu_edu_hk/EcgNImBdl9dBnS8Qza0U930B3ENSDDh5EeAZoSkX95VtHQ?e=E1SK0y)
 * ```threads```, Threads to be used.
 * ```out_dir```, Output directory.
 * ```prefix```, Intermediate file prefix, can be sample name.
-* ```ENV_PREFIX```, Conda ENV path. Please keep empty if conda ENV is activated.
-2. Running PALACE.  
+* ```ENV_PREFIX```, Conda ENV path. please keep empty if conda ENV is activated.
+2. Runing PALACE.  
 * ``` palace --config config.txt```
+
 ## Output
 * ```01-qc/```, fastp output.
 * ```02-assembly/```, Raw assembly result with spades with --meta.

@@ -44,14 +44,21 @@ def main(args):
     seg_depths = pysam.TabixFile(bam_file)
     graph_dict, similar_refs = parse_match_file(match_file, ref_pecent)
     ref_order = parse_blast(blast_file)
+    
     with open(args.ref_same_out, "w") as f:
-        for item in similar_refs.values():
+        # Sort dictionary keys to ensure consistent output order
+        for key in sorted(similar_refs.keys()):
+            item = similar_refs[key]
             f.write(",".join(item))
             f.write("\n")
-    similar_refs_list = [item for sublist in similar_refs.values() for item in sublist]
+            
+    # Extract similar_refs values in sorted order
+    similar_refs_list = [item for key in sorted(similar_refs.keys()) for item in similar_refs[key]]
     added_segs = []
     orders = []
-    for ref_key, ref_segs in graph_dict.items():
+    
+    # Traverse graph_dict in sorted key order
+    for ref_key, ref_segs in sorted(graph_dict.items()):
         if ref_key not in similar_refs_list:
             continue
         if ref_key in ref_order.keys():
@@ -59,9 +66,8 @@ def main(args):
         updated_ref_segs = update_segs_with_depth(ref_segs, seg_depths, full_segs)
         if len(updated_ref_segs) == 0:
             continue
+            
         with open(prefix +"_ref"+ ref_key+"ref.second", "w") as f:
-            # print(ref_key, ref_segs,"------", updated_ref_segs)
-            # print("================")
             ref_juncs = parse_juncs_from_segs(ref_segs, full_juncs)
             for seg in updated_ref_segs:
                 added_segs.append(seg)
@@ -69,40 +75,24 @@ def main(args):
                 if seg_order == -2:
                     seg[-1] = '-1'
                 f.write(" ".join(seg)+" "+str(seg_order)+"\n")
-            for junc in ref_juncs:
-                # print(junc)
+            
+            # Convert set to sorted list to eliminate hash randomization
+            for junc in sorted(ref_juncs):
                 f.write(junc+"\n")
-    pure_segs,remain_segs = create_sub_graph_from_remain_segs(added_segs, full_segs)
+                
+    pure_segs, remain_segs = create_sub_graph_from_remain_segs(added_segs, full_segs)
+    
     with open(prefix +"_refremain"+"ref.second", "w") as f:
-        #print(remain_segs)
-        #updated_ref_segs = update_segs_with_depth(remain_segs, seg_depths, full_segs)
         ref_juncs = parse_juncs_from_segs(pure_segs, full_juncs)
         for seg in remain_segs:
             added_segs.append(seg)
-            #seg_order = find_index(orders, seg[1])
-            #if seg_order == -2:
-            #    seg[-1] = '-1'
             f.write(seg+" -1"+"\n")
-        for junc in ref_juncs:
-            # print(junc)
+            
+        # Convert set to sorted list for output
+        for junc in sorted(ref_juncs):
             f.write(junc+"\n")
-#def get_segs_depth(segs, bam, samtools):
-#    seg_depths = {}
-#    total_depths = []
-#    for item in segs:
-#        contig = item
-#        depths = run_samtools_depth(bam, contig, samtools)
-#        if depths:
-#            average_depth = calculate_average_depth(depths)
-#            seg_depths[contig] = (average_depth, len(depths))
-#        else:
-#            spade_contig = contig.split("_")
-#            seg_depths[contig] = (spade_contig[-1], spade_contig[-3])
-#    return seg_depths
 
-    # depths = run_samtools_depth(bam, segs, samtools)
-    # seg_depths = dict(zip(segs, depths))
-    # return seg_depths
+
 def get_segs_depth(segs, bam, samtools):
     """
     Calculate depths for multiple segments using a BED file for efficiency.
@@ -137,23 +127,6 @@ def parse_juncs_from_segs(segs, full_juncs):
             ref_juncs.add(" ".join(jun_str))
     return ref_juncs
 
-# def parse_juncs_from_segs(segs, full_juncs):
-#     ref_juncs = set()
-#     for item in segs:
-#         for jun_key, jun_str in full_juncs.items():
-#             if item[0] in jun_key:
-#                 ref_juncs.add(" ".join(jun_str))
-#     return ref_juncs
-#def run_samtools_depth(input_bam, region, samtools):
-#    cmd = f'{samtools} depth -r {region} {input_bam}'
-#    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-#
-#    if result.returncode != 0:
-#        print(f"Error running samtools depth: {result.stderr}")
-#        return None
-#
-#    depths = [int(line.split('\t')[2]) for line in result.stdout.splitlines()]
-#    return depths
 
 import pysam
 
@@ -195,87 +168,7 @@ def run_samtools_depth_with_bed(depth_gz_file, contigs):
     return depth_dict
 
 
-#import gzip
 
-#def run_samtools_depth_with_bed(depth_gz_file, contigs):
-#    """
-#    Parse a samtools depth.gz file for specific contigs.
-#
-#    This function reads an indexed depth.gz file and extracts depth information for the specified contigs.
-#
-#    Args:
-#        depth_gz_file (str): Path to the depth.gz file (compressed output from samtools depth).
-#        contigs (list): List of contig names (e.g., ["chr1", "chr2"]).
-#
-#    Returns:
-#        dict: A dictionary where keys are contigs, and values are lists of depth values for the specified contigs.
-#    """
-#    # Convert contigs list to a set for faster lookups
-#    contig_set = set(contigs)
-#
-#    # Dictionary to store the extracted depth values
-#    depth_dict = {}
-#
-#    # Open and read the depth.gz file
-#    with gzip.open(depth_gz_file, "rt") as f:
-#        for line in f:
-#            contig, pos, depth = line.split("\t")  # Each line contains contig, position, depth
-#            pos, depth = int(pos), int(depth)
-#
-#            # Check if the contig is in the specified list of contigs
-#            if contig in contig_set:
-#                if contig not in depth_dict:
-#                    depth_dict[contig] = []
-#                depth_dict[contig].append(depth)
-#
-#    return depth_dict
-
-#def run_samtools_depth_with_bed(input_bam, regions, samtools):
-#    """
-#    Run samtools depth using a BED file for specifying regions.
-#    This function creates a BED file named based on the input BAM file, runs samtools depth, and removes the BED file afterward.
-#
-#    Args:
-#        input_bam (str): Path to the input BAM file.
-#        regions (list): List of regions in BED format (e.g., ["contig1\t0\t1000", "contig2\t500\t1500"]).
-#        samtools (str): Path to the samtools executable.
-#
-#    Returns:
-#        dict: A dictionary where keys are contigs, and values are lists of depth values for the specified regions.
-#    """
-#    # Create a BED file named based on the input BAM file
-#    bed_file_path = f"{input_bam}.bed"
-#    try:
-#        # Write regions to the BED file
-#        with open(bed_file_path, "w") as bed_file:
-#            for region in regions:
-#                bed_file.write(f"{region}\n")  # Write regions in BED format
-#            bed_file.flush()  # Flush the buffer to ensure data is written to disk
-#            os.fsync(bed_file.fileno())  # Ensure the file is physically written to disk
-#
-#        # Run samtools depth with the BED file
-#        cmd = f'{samtools} depth -b {bed_file_path} {input_bam}'
-#        result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-#
-#        if result.returncode != 0:
-#            print(f"Error running samtools depth: {result.stderr}")
-#            return None
-#
-#        # Parse the output into a dictionary
-#        depth_dict = {}
-#        for line in result.stdout.splitlines():
-#            contig, pos, depth = line.split('\t')  # Extract contig, position, and depth
-#            depth = int(depth)
-#            if contig not in depth_dict:
-#                depth_dict[contig] = []
-#            depth_dict[contig].append(depth)
-#
-#        return depth_dict
-#    finally:
-#        pass
-        # Clean up the BED file
-        #if os.path.exists(bed_file_path):
-        #    os.remove(bed_file_path)
 
 def calculate_average_depth(depths):
     total_depth = sum(depths)
@@ -364,35 +257,7 @@ def update_segs_with_depth(segs, depth_tabix, seg_gene_scores):
             ])
 
     return final_segs
-#def update_segs_with_depth(segs, seg_depths, seg_gene_scores):
-#    total_depths = 0
-#    total_lens = 0
-#    average_contig_depth = {}
-#    final_segs = []
-#    for item in segs:
-#        contig = item[0]
-#        avg_depth, contig_len = seg_depths[contig]
-#        total_depths = total_depths + float(avg_depth) * int(contig_len)
-#        total_lens = total_lens + int(contig_len)
-#    if total_lens == 0:
-#        return []
-#    total_average_depth = total_depths/total_lens
-#    # print(segs, total_average_depth)
-#    for k in seg_depths.keys():
-#        in_segs = False
-#        for seg in segs:
-#            if k in seg:
-#                in_segs = True
-#        if not in_segs:
-#            continue
-#        i_arr = k.split()
-#        i_depth = seg_depths[k]
-#        copy_num = round(float(i_depth[0])/total_average_depth)
-#        if copy_num == 0:
-#            copy_num = 1
-#        # final_segs.append("SEG " + k + " " +k.split('_')[-1] + " "+str(copy_num) + " 0 0 1")
-#        final_segs.append(["SEG",k, str(i_depth[0]), str(copy_num) ,seg_gene_scores[k][0], seg_gene_scores[k][1], "1"])
-#    return final_segs
+
 
 def parse_graph_file(file_path):
     segs = {}

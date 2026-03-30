@@ -14,3 +14,6 @@ threads=8
 
 #set conda
 ENV_PREFIX=
+
+#min phage len output
+MIN_LEN=10000

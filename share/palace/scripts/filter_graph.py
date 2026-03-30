@@ -2,7 +2,9 @@ import sys
 import re
 from collections import defaultdict
 
-# Parse command line arguments
+# ==========================================
+# 1. Command line arguments
+# ==========================================
 fastg_fai_file = sys.argv[1]
 original_graph_file = sys.argv[2]
 output_file = sys.argv[3]
@@ -15,22 +17,24 @@ blast_ratio = float(sys.argv[9])
 fasta_fai_file = sys.argv[10]
 hit_segs_file = sys.argv[11]
 contig_path_file = sys.argv[12]
+score_threshold = float(sys.argv[13])  # Score threshold parameter
 
-# Constants
+# ==========================================
+# 2. Global constants and data structures
+# ==========================================
 TO_REMOVE_SCORE_THRESHOLD = 0.2
 RELEVATE_EDGE_LEN = 200
 MIN_CYCLE_LEN = 1000
 MIN_ALN_LEN = 1000
 SAMPLE = 'SAMPLE'
 
-# Initialize data structures
 num_to_full_name = {}
 full_name_to_num = {}
 fai_len = {}
 gene_res = {}
 scores = defaultdict(lambda: '0')
 blast_segs = set()
-relevate_blast_segs = set()
+relevate_blast_segs = set()  # Store 0-hop and 1-hop nodes
 score_segs = set()
 fastg_graph = {}
 all_segs = {}
@@ -38,74 +42,77 @@ write_segs = set()
 write_juncs = []
 hit_segs = defaultdict(str)
 
-# Helper functions
+
+# ==========================================
+# 3. Helper parsing and filtering functions
+# ==========================================
 def get_edge_len(edge):
-    """Extract edge length from edge name"""
+    """Extract length from node name"""
     return int(edge.split("_")[3])
 
 def parse_fasta_index():
-    """Parse FASTA index file to get sequence lengths and name mappings"""
+    """Parse FASTA index file to get sequence lengths and build name mapping"""
     with open(fasta_fai_file, 'r') as f:
         for line in f:
             fields = line.strip().split('\t')
             seq_name = fields[0]
             seq_len = int(fields[1])
             fai_len[seq_name] = seq_len
-            
-            # Extract node number from sequence name
+
             node_num = seq_name.split("_")[1]
             num_to_full_name[node_num] = seq_name
             full_name_to_num[seq_name] = node_num
 
 def parse_blast_results():
-    """Parse BLAST results to identify segments with significant hits"""
+    """Parse BLAST results to find nodes matching alignment ratio or length"""
     prev_seg = ""
     prev_ref = ""
     prev_len = 0
-    
+
     with open(blast_file, 'r') as f:
         for line in f:
             fields = line.strip().split("\t")
             query, ref, identity, aln_len = fields[0], fields[1], float(fields[2]), int(fields[3])
-            
-            # Check if we've moved to a new query or reference
+
             if (prev_seg != query and prev_seg != "") or (prev_ref != ref and prev_ref != ""):
-                # Check if previous segment meets criteria
                 seg_len = fai_len[prev_seg]
+            # If alignment ratio meets threshold or length > 2000, add to blast_segs
                 if prev_len / seg_len > blast_ratio or prev_len > 2000:
                     blast_segs.add(prev_seg)
                 prev_seg = query
                 prev_ref = ref
                 prev_len = aln_len if identity > blast_ratio * 100 else 0
             else:
-                # Accumulate alignment length for high-identity hits
                 if identity > blast_ratio * 100:
                     prev_len += aln_len
                 prev_seg = query
                 prev_ref = ref
-    
-    # Process the last segment
+
     if prev_seg and prev_seg in fai_len:
         seg_len = fai_len[prev_seg]
         if prev_len / seg_len > blast_ratio or prev_len > 2000:
             blast_segs.add(prev_seg)
 
 def parse_gene_and_score_files():
-    """Parse gene and score files"""
-    # Parse gene file
+    """Parse gene annotation and score files"""
     if len(sys.argv) > 5:
         with open(gene_file, 'r') as f:
             for line in f:
                 contig_name = line.split("\t")[0]
                 gene_res[contig_name] = '1'
-        
-        # Parse score file
+
         with open(score_file, 'r') as f:
             for line in f:
                 fields = line.strip().split("\t")
-                contig_name, score_value = fields[0], fields[1]
+                contig_name, score_str = fields[0], fields[1]
+                if 'e' in score_str.lower():
+                    score_value = '0.0'
+                else:
+                    score_value = f"{float(score_str):.3f}"
                 scores[contig_name] = score_value
-                if float(score_value) > 0.7:
+                
+                # Use passed score_threshold parameter instead of hardcoded 0.7
+                if float(score_value) > score_threshold:
                     score_segs.add(contig_name)
 
 def parse_fastg_index():
@@ -117,20 +124,19 @@ def parse_fastg_index():
             fastg_graph[parts[0]] = parts[1:]
 
 def filter_paths(support_segs):
-    """Filter contig paths based on support segments"""
+    """Evaluate paths: if > half (or > 2000bp) consists of core seed, recover all nodes in path"""
     full_name_results = set()
-    
     with open(contig_path_file, 'r') as f:
         for line in f:
             line = line.strip().replace(";", "")
             if line.startswith("NODE"):
                 continue
-            
+
             nums = line.split(",")
             full_names = []
             full_len = 0
             add_len = 0
-            
+
             for num in nums:
                 full_name = num_to_full_name[num[:-1]]
                 full_names.append(full_name)
@@ -138,123 +144,160 @@ def filter_paths(support_segs):
                 full_len += e_len
                 if full_name in support_segs:
                     add_len += e_len
-            
-            # Check if path meets criteria
-            #if add_len > 0 and (add_len / full_len >= 0.5 or add_len > 2000):
-            full_name_results.update(full_names)
-    
+
+            if add_len > 0 and (add_len / full_len >= 0.5 or add_len > 2000):
+                full_name_results.update(full_names)
+
     return full_name_results
 
-def process_segment(seg_name, line):
-    """Process a segment and return formatted output"""
-    is_blast = '1' if seg_name in blast_segs else '0'
-    gene_val = gene_res.get(seg_name, '0')
-    score_val = scores.get(seg_name, '0')
-    return f"{line.strip()} {gene_val} {score_val} {is_blast}\n"
-
 def should_include_segment(seg_name):
-    """Check if segment should be included based on various criteria"""
-    return (seg_name in blast_segs or 
-            seg_name in gene_res or 
-            float(scores.get(seg_name, '0')) > 0.7 or
-            seg_name in relevate_blast_segs)
+    """
+    严格判定是否为核心种子 (0跳)。
+    【重要修复】：移除了这里的拓扑状态判断，防止污染核心种子的定义。
+    """
+    # 【修改】使用传入的 score_threshold 参数替代硬编码的 0.7
+    return (seg_name in blast_segs or
+            seg_name in gene_res or
+            float(scores.get(seg_name, '0')) > score_threshold)
 
 def update_hit_segs(seg_name):
-    """Update hit segments tracking"""
+    """记录直接命中的核心种子标记"""
     hit_info = []
     if seg_name in blast_segs:
         hit_info.append("ref+")
-    if float(scores.get(seg_name, '0')) > 0.7:
+        
+    # 【修改】使用传入的 score_threshold 参数替代硬编码的 0.7
+    if float(scores.get(seg_name, '0')) > score_threshold:
         hit_info.append("score+")
+        
     if seg_name in gene_res:
         hit_info.append("gene+")
-    
+
     if hit_info:
         hit_segs[seg_name] = "".join(hit_info)
         relevate_blast_segs.add(seg_name)
 
-# Main processing
+def process_segment(seg_name, line):
+    """为输出格式化 SEG 行，并剔除原图文件自带的科学计数法"""
+    fields = line.strip().split()
+
+    # 前两列是 'SEG' 和 节点名称(带E)，必须原样保留保护起来
+    cleaned_fields = [fields[0], fields[1]]
+
+    # 从第三列开始，针对数值部分清洗科学计数法
+    for field in fields[2:]:
+        if 'e' in field.lower():
+            try:
+                val = float(field)
+                # 比如 3.07768e+06 会变成 3077680.0
+                # 如果转成浮点后是个整数，就干脆转成 int 格式去掉 .0
+                if val.is_integer():
+                    cleaned_fields.append(str(int(val)))
+                else:
+                    # 如果有小数，最多保留6位，并去掉末尾多余的0
+                    cleaned_fields.append(f"{val:.3f}".rstrip('0').rstrip('.'))
+            except ValueError:
+                # 万一解析失败（非纯数字），原样保留
+                cleaned_fields.append(field)
+        else:
+            cleaned_fields.append(field)
+
+    cleaned_line = " ".join(cleaned_fields)
+
+    is_blast = '1' if seg_name in blast_segs else '0'
+    gene_val = gene_res.get(seg_name, '0')
+    score_val = scores.get(seg_name, '0.000')
+
+    return f"{cleaned_line} {gene_val} {score_val} {is_blast}\n"
+
+
+# ==========================================
+# 4. 主干处理逻辑
+# ==========================================
 def main():
-    # Parse all input files
+    # 1. 读入并解析所有前置信息
     parse_fasta_index()
     parse_blast_results()
     parse_gene_and_score_files()
     parse_fastg_index()
-    
-    # Read original graph
+
     with open(original_graph_file, 'r') as f:
         lines = f.readlines()
-    
-    # First pass: process segments and identify relevant segments
+
+    # 2. 扫描图文件，提取基础信息并圈定核心种子 (0-Hop)
     for line in lines:
         fields = line.rstrip().split(" ")
         if fields[0] == "SEG":
             seg_name = fields[1]
             all_segs[seg_name] = line
             update_hit_segs(seg_name)
-            
+
             if should_include_segment(seg_name):
                 write_segs.add(process_segment(seg_name, line))
-    
-    # Process junctions (first criteria)
+
+    # 【修复核心区】：严格控制跳数，杜绝链式反应
+    core_seeds = set(relevate_blast_segs) # 锁定 0-hop 种子
+    hop1_segs = set()                     # 暂存 1-hop 邻居
+
+    # 3. 第一跳扩增 (1-Hop)：仅以 core_seeds 为原点去捞连接边和邻居
     for line in lines:
         fields = line.rstrip().split(" ")
         if fields[0] != "SEG":
             left_seg, right_seg = fields[1], fields[3]
-            left_score = float(scores.get(left_seg, '0'))
-            right_score = float(scores.get(right_seg, '0'))
-            
-            # Check various conditions for including junction
-            if (left_seg == right_seg or
-                should_include_segment(left_seg) or 
-                should_include_segment(right_seg)):
-                
+
+            if left_seg == right_seg or left_seg in core_seeds or right_seg in core_seeds:
                 write_juncs.append(line)
                 write_segs.add(process_segment(left_seg, all_segs[left_seg]))
                 write_segs.add(process_segment(right_seg, all_segs[right_seg]))
-                relevate_blast_segs.add(left_seg)
-                relevate_blast_segs.add(right_seg)
-    
-    # Second pass: include junctions connected to relevant segments
+                # 放入暂存区，不在本循环内感染 core_seeds
+                hop1_segs.add(left_seg)
+                hop1_segs.add(right_seg)
+
+    # 将 0-hop 和 1-hop 合并，作为第二跳的起点
+    relevate_blast_segs.update(hop1_segs)
+
+    # 4. 第二跳扩增 (2-Hop)：以 relevate_blast_segs 为原点再捞一次
     for line in lines:
         fields = line.rstrip().split(" ")
         if fields[0] != "SEG":
             left_seg, right_seg = fields[1], fields[3]
+
             if left_seg in relevate_blast_segs or right_seg in relevate_blast_segs:
                 write_juncs.append(line)
                 write_segs.add(process_segment(left_seg, all_segs[left_seg]))
                 write_segs.add(process_segment(right_seg, all_segs[right_seg]))
-    
-    # Filter paths and add missing segments
+
+    # 5. 基于线性路径逻辑 (Paths) 进行兜底捞回
     support_segs = blast_segs | set(gene_res.keys()) | score_segs
     path_segs = filter_paths(support_segs)
-    
-    # Extract already written segments
     written_segs = {item.split(" ")[1] for item in write_segs}
-    
-    # Write output
+
+    # ==========================================
+    # 5. 写出结果文件
+    # ==========================================
     with open(output_file, 'w') as out:
-        # Write segments
+        # 写出所有通过种子和跳数捞回的 SEG
         for seg_line in write_segs:
             out.write(seg_line)
-        
-        # Write path segments not already written
+
+        # 写出因为路径兜底捞回，但前面没被抓进去的 SEG (补上默认分值)
         for seg in path_segs:
             if seg not in written_segs:
                 out.write(f"{all_segs[seg].strip()} 0 1.0 0\n")
-        
-        # Write unique junctions
+
+        # 去重并写出 Junctions 连边信息
         seen_juncs = set()
         for junc in write_juncs:
             if junc not in seen_juncs:
                 out.write(junc)
                 seen_juncs.add(junc)
-    
-    # Write hit segments file
+
+    # 写出命中的特征标签记录
     with open(hit_segs_file, 'w') as out:
         for seg_name, hit_info in hit_segs.items():
             if hit_info:
                 out.write(f"{SAMPLE}\t{seg_name}\t{hit_info}\n")
+
 
 if __name__ == "__main__":
     main()

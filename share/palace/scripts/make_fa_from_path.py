@@ -1,10 +1,3 @@
-"""
-FASTA sequence assembler from path descriptions.
-
-This script reads contig paths from a file and assembles sequences from a FASTA file
-based on the path information, handling forward and reverse complement orientations.
-"""
-
 import pysam
 import sys
 

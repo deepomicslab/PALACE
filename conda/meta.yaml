@@ -1,0 +1,66 @@
+# Build with: conda build -c conda-forge -c bioconda -c pytorch .
+{% set version = "1.0" %}
+
+package:
+  name: palace
+  version: {{ version }}
+
+source:
+  url: https://github.com/deepomicslab/PALACE/archive/refs/tags/{{ version }}.zip
+  sha256: 0b69b5efa9348602f9376faad58d00887d894ba727c42ff2cea15bf7b696d282
+
+build:
+  number: 0
+  skip: true  # [not linux]
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+  host:
+    - python >=3.9,<3.12
+    - pip
+    - setuptools
+    - cython
+    - numpy
+    - bzip2
+    - xz
+    - curl
+    - zlib
+    - htslib
+
+  run:
+    - python >=3.9,<3.12
+    - samtools
+    - numpy
+    - pandas
+    - zlib
+    - htslib
+    - bzip2
+    - xz
+    - curl
+    - pysam
+    - bwa
+    - blast
+    - fastp
+    - ragtag
+    - spades
+    - pyfaidx
+    - cython
+    - biopython
+    - pytorch >=1.13.1
+    - torch-geometric >=2.0
+
+test:
+  commands:
+    - palace --help
+
+about:
+  home: https://github.com/deepomicslab/PALACE
+  license: MIT
+  license_file: LICENSE.txt
+  summary: "A comprehensive phage analysis workflow for Linux"
+
+extra:
+  recipe-maintainers:
+    - PAN Guangze

@@ -924,8 +924,8 @@ void read_fastq(string fastq_file, int k, char* coder, int* base, char* comple,
 
 
     string reads_seq;
-    int reads_int [300];
-    int reads_comple_int [300];
+    int reads_int [400];
+    int reads_comple_int [400];
 
     unsigned int lines = 0;
     int converted_reads [900];

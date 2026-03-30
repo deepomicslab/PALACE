@@ -55,41 +55,23 @@ def load_score_hits(score_file, min_score=0.7):
     
     return score_hits
 
-#def filter_results(res, gene_hits, score_hits):
-#    """Filter results based on gene and score hits."""
-#    filtered_results = []
-#    
-#    for item in res:
-#        # Extract contigs without direction indicators
-#        contigs = [contig.rstrip('+-') for contig in re.split(r'(?=[+-])', item) if contig.strip()]
-#        
-#        # Single contig case: must be in gene_hits or score_hits
-#        if len(contigs) <= 1:
-#            if contigs and (contigs[0] in gene_hits or contigs[0] in score_hits):
-#                filtered_results.append(item)
-#        else:
-#            # Multiple contigs: always include
-#            filtered_results.append(item)
-#    
-#    return filtered_results
 
 def filter_results(res, gene_hits, score_hits):
-    """过滤结果并在每个contig（保留其正负号）后添加tab进行分割。"""
+    """Filter results and add tabs after each contig (preserving orientation signs)."""
     filtered_results = []
 
     for item in res:
-        # 使用findall提取每个以正负号结尾的片段
+        # Extract each segment ending with + or -
         contig_list = re.findall(r'.+?[+-]', item)
-        # 用于判断：去掉各个片段末尾的正负号
+        # Get contigs without orientation signs for checking
         contigs_for_check = [contig.rstrip('+-') for contig in contig_list]
 
-        # 单个contig情况：只有一个的情况，需要该contig在gene_hits或score_hits中
+        # Single contig case: must be in gene_hits or score_hits
         if len(contigs_for_check) <= 1:
             if contigs_for_check and (contigs_for_check[0] in gene_hits or contigs_for_check[0] in score_hits):
-                # 用\t拼接时，tab会在每个contig（其正负号之后）后面进行分割
                 filtered_results.append("\t".join(contig_list))
         else:
-            # 多个contigs情况始终保留
+            # Multiple contigs: always keep
             filtered_results.append("\t".join(contig_list))
 
     return filtered_results

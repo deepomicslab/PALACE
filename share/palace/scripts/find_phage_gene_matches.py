@@ -1,271 +1,159 @@
 #!/usr/bin/env python
-##This scripts copied from https://github.com/Shamir-Lab/SCAPP/blob/master/scapp/find_plasmid_gene_matches.py
-
-# get the phage gene matches in the assembled contigs, given lists of phage-specific genes and contigs
-# usage: python -c <contigs file> -o <output dir> -g <phage-specific gene files> -p <phage-specific protein files> -dg <blast gene database> -dp <blast protein database>
-
-import argparse, glob, os, subprocess, re
+import argparse, glob, os, subprocess, re, shutil, sys
 from subprocess import CalledProcessError
 
 def parse_user_input():
-    parser = argparse.ArgumentParser(
-        description=
-        'find_phage_gene_matches finds the list of contigs with matches to the phage specific genes'
-        )
+    parser = argparse.ArgumentParser(description='find_phage_gene_matches supporting BLAST+, MMseqs2 or DIAMOND')
     g = parser.add_mutually_exclusive_group(required=True)
-    g.add_argument('-f','--fasta',
-     help='input file - contigs in fasta format',
-     type=str
-     )
-    g.add_argument('-db', '--blastdb',
-      help='path of blast database for the contigs',
-      type=str
-     )
-    parser.add_argument('-o','--output',
-     help='path to directory to write output and temporary files',
-     required=True, type=str
-     )
-    parser.add_argument('-g','--genes_dir',
-     help='directory with phage-specific gene fasta files',
-     required=False, type=str
-     )
-    parser.add_argument('-p','--proteins_dir',
-     help='directory with phage-specific protein fasta files',
-     required=False, type=str
-     )
-    parser.add_argument('--ncbi_bin',
-     help='path of ncbi blast executables',
-     default="", type=str
-     )
-    parser.add_argument('-n', '--nthreads',
-     help='number of threads for blastn and tblastn to use',
-     default=1, type=int
-     )
-    parser.add_argument('-t', '--thresh',
-     help='threshold for sequence identity and length of blast hits',
-     default=0.75, type=float
-     )
-    parser.add_argument('-c', '--clean',
-     help='Optionally remove all files that were created.',
-     action='store_true'
-     )
-
+    g.add_argument('-f','--fasta', help='input file - contigs in fasta format', type=str)
+    g.add_argument('-db', '--dbpath', help='path of existing database for the contigs', type=str)
+    parser.add_argument('-o','--output', help='output directory', required=True, type=str)
+    parser.add_argument('-g','--genes_dir', help='dir with gene nt fasta files', type=str)
+    parser.add_argument('-p','--proteins_dir', help='dir with protein aa fasta files', type=str)
+    parser.add_argument('--engine', choices=['blast', 'mmseqs', 'diamond'], default='blast', help='Search engine')
+    parser.add_argument('--bin_path', help='bin path', default="", type=str)
+    parser.add_argument('-n', '--nthreads', help='threads', default=1, type=int)
+    parser.add_argument('-t', '--thresh', help='threshold', default=0.75, type=float)
+    parser.add_argument('-c', '--clean', help='remove intermediate files', action='store_true')
     return parser.parse_args()
 
-
-def create_db(infile,ncbi_bin, outdir):
-    ''' create a blast database for the infile
-    '''
-    outputfile = os.path.basename(infile) + ".blastdb"
-    outputpath = os.path.join(outdir,outputfile)
-
-    command = os.path.join(ncbi_bin,'makeblastdb') + "  -in " + infile + " -dbtype nucl -out " + outputpath
-#    command = os.path.join(ncbi_bin,'makeblastdb') + "  -in " + infile + " -dbtype nucl -parse_seqids -out " + outputpath
-
-    print("Running command: " + command)
+def run_cmd(command):
+    print(f"Running command: {command}")
     try:
         subprocess.check_call(command, shell=True)
-    except CalledProcessError:
-        print("Error creating blast database. Check path to makeblastdb executable.")
-        raise
+    except CalledProcessError as e:
+        print(f"Error executing command.")
+        raise e
 
-    return outputpath
+def create_db(infile, engine, bin_path, outdir):
+    basename = os.path.basename(infile)
+    if engine == 'blast':
+        dbpath = os.path.join(outdir, basename + ".blastdb")
+        cmd = f"{os.path.join(bin_path, 'makeblastdb')} -in {infile} -dbtype nucl -out {dbpath}"
+        run_cmd(cmd)
+    elif engine == 'diamond':
+        return infile
+    else:
+        dbpath = os.path.join(outdir, basename + ".mmseqsdb")
+        cmd = f"{os.path.join(bin_path, 'mmseqs')} createdb {infile} {dbpath}"
+        run_cmd(cmd)
+    return dbpath
 
+def mmseqs_search_logic(query_fasta, target_db, numthreads, outdir, bin_path, search_type):
+    base = os.path.basename(query_fasta)
+    tmp_dir = os.path.join(outdir, f"tmp_{base}")
+    if not os.path.exists(tmp_dir): os.makedirs(tmp_dir)
 
-#def blast_gene_file(gf, dbpath, ncbi_bin, numthreads, outdir):
-#    ''' run blastn of the genefile against the blast database
-#    '''
-#
-#    outputfile = os.path.basename(gf) + "_blastdb.out"
-#    outputpath = os.path.join(outdir,outputfile)
-#
-#    command = os.path.join(ncbi_bin,'blastn') + " -task megablast -db " + dbpath + " -query " + gf + \
-#                " -out " + outputpath + " -num_threads " + str(numthreads) + \
-#                ' -outfmt "6 qseqid sseqid length pident qlen slen evalue"'
-#
-#    print("Running command: " + command)
-#    try:
-#        subprocess.check_call(command, shell=True)
-#    except CalledProcessError:
-#        print("Error running blastn. Check paths to blastn executable and input files.")
-#        raise
-#
-#    return outputpath
-def blast_gene_file(gf, dbpath, ncbi_bin, numthreads, outdir):
-    ''' Run blastn of the genefile against the blast database. Skip if output file exists. '''
+    output_txt = os.path.join(outdir, f"{base}_mmseqs.out")
+    q_db = os.path.join(tmp_dir, "query.db")
+    run_cmd(f"{os.path.join(bin_path, 'mmseqs')} createdb {query_fasta} {q_db}")
 
-    # Define output file path
-    outputfile = os.path.basename(gf) + "_blastdb.out"
-    outputpath = os.path.join(outdir, outputfile)
+    res_db = os.path.join(tmp_dir, "res.db")
+    s_cmd = (f"{os.path.join(bin_path, 'mmseqs')} search {q_db} {target_db} {res_db} {tmp_dir} "
+             f"--threads {numthreads} --search-type {search_type} -s 4.0 --min-seq-id 0.7")
+    run_cmd(s_cmd)
 
-    # Check if the output file already exists
-    if os.path.exists(outputpath):
-        print(f"Output file {outputpath} already exists. Skipping gene BLAST run.")
+    fmt = "query,target,alnlen,pident,qlen,tlen,evalue"
+    c_cmd = (f"{os.path.join(bin_path, 'mmseqs')} convertalis {q_db} {target_db} {res_db} {output_txt} "
+             f"--format-output {fmt}")
+    run_cmd(c_cmd)
+
+    return output_txt
+
+def search_protein(pf, dbpath, engine, bin_path, numthreads, outdir):
+    basename = os.path.basename(pf)
+    if engine == 'blast':
+        outputpath = os.path.join(outdir, basename + "_blast.out")
+        cmd = (f"{os.path.join(bin_path, 'tblastn')} -db {dbpath} -db_gencode 11 -query {pf} "
+               f"-out {outputpath} -num_threads {numthreads} "
+               f'-outfmt "6 qseqid sseqid length pident qlen slen evalue"')
+        run_cmd(cmd)
         return outputpath
-
-    # Construct the command
-    command = os.path.join(ncbi_bin, 'blastn') + " -task megablast -db " + dbpath + " -query " + gf + \
-              " -out " + outputpath + " -num_threads " + str(numthreads) + \
-              ' -outfmt "6 qseqid sseqid length pident qlen slen evalue"'
-
-    print("Running command: " + command)
-
-    # Run the command, handling errors
-    try:
-        subprocess.check_call(command, shell=True)
-    except CalledProcessError:
-        print("Error running blastn. Check paths to blastn executable and input files.")
-        raise
-
-    return outputpath
-
-
-#def blast_protein_file(pf, dbpath, ncbi_bin, numthreads, outdir):
-#    ''' same, for protein lists
-#    '''
-#    outputfile = os.path.basename(pf) + "_blastdb.out"
-#    outputpath = os.path.join(outdir,outputfile)
-#
-#    num_tblastn_threads = numthreads
-#    #num_tblastn_threads = min(numthreads, 4) # tblastn is buggy and seg faults randomly
-#                                                 # seems to do this less when there are fewer threads
-#
-#    command = os.path.join(ncbi_bin,'tblastn') + " -db " + dbpath + " -db_gencode 11 -query " + pf + \
-#                " -out " + outputpath + " -num_threads " + str(num_tblastn_threads) + \
-#                ' -outfmt "6 qseqid sseqid length pident qlen slen evalue"'
-#
-#    print("Running command: " + command)
-#    try:
-#        subprocess.check_call(command, shell=True)
-#    except CalledProcessError:
-#        print("Error running tblastn. Check paths to tblastn executable and input files.")
-#        raise
-#
-#    return outputpath
-def blast_protein_file(pf, dbpath, ncbi_bin, numthreads, outdir):
-    ''' same, for protein lists
-    '''
-    outputfile = os.path.basename(pf) + "_blastdb.out"
-    outputpath = os.path.join(outdir,outputfile)
-
-        # Check if the output file already exists
-    if os.path.exists(outputpath):
-        print(f"Output file {outputpath} already exists. Skipping protein BLAST run.")
+    elif engine == 'diamond':
+        outputpath = os.path.join(outdir, basename + "_diamond.out")
+        dbpath_dmnd = os.path.join(outdir, basename + ".dmnd")
+        
+        run_cmd(f"{os.path.join(bin_path, 'diamond')} makedb --in {pf} -d {dbpath_dmnd} --quiet")
+        
+        cmd = (f"{os.path.join(bin_path, 'diamond')} blastx -d {dbpath_dmnd} -q {dbpath} "
+               f"-o {outputpath} -p {numthreads} "
+               f'--outfmt 6 sseqid qseqid length pident slen qlen evalue')
+        run_cmd(cmd)
+        
+        if os.path.exists(dbpath_dmnd): os.remove(dbpath_dmnd)
         return outputpath
+    else:
+        return mmseqs_search_logic(pf, dbpath, numthreads, outdir, bin_path, 2)
 
-    num_tblastn_threads = numthreads
-    #num_tblastn_threads = min(numthreads, 4) # tblastn is buggy and seg faults randomly
-                                                 # seems to do this less when there are fewer threads
+def search_gene(gf, dbpath, engine, bin_path, numthreads, outdir):
+    basename = os.path.basename(gf)
+    if engine == 'diamond':
+        print(f"Warning: DIAMOND does not support nt vs nt search. Skipping {basename}...")
+        return None
+        
+    if engine == 'blast':
+        outputpath = os.path.join(outdir, basename + "_blast.out")
+        cmd = (f"{os.path.join(bin_path, 'blastn')} -task megablast -db {dbpath} -query {gf} "
+               f"-out {outputpath} -num_threads {numthreads} "
+               f'-outfmt "6 qseqid sseqid length pident qlen slen evalue"')
+        run_cmd(cmd)
+        return outputpath
+    else:
+        return mmseqs_search_logic(gf, dbpath, numthreads, outdir, bin_path, 3)
 
-    command = os.path.join(ncbi_bin,'tblastn') + " -db " + dbpath + " -db_gencode 11 -query " + pf + \
-                " -out " + outputpath + " -num_threads " + str(num_tblastn_threads) + \
-                ' -outfmt "6 qseqid sseqid length pident qlen slen evalue"'
-
-    print("Running command: " + command)
-    try:
-        subprocess.check_call(command, shell=True)
-    except CalledProcessError:
-        print("Error running tblastn. Check paths to tblastn executable and input files.")
-        raise
-
-    return outputpath
-
-
-def get_blast_hits(blastfile, hit_contigs_set, thresh=0.75):
+def get_hits(blastfile, hit_contigs_set, thresh=0.75, is_protein=False, engine='blast'):
+    if not blastfile or not os.path.exists(blastfile): return
     with open(blastfile) as f:
         for line in f:
             splt = line.strip().split('\t')
-            contig = splt[1]
-            contig = re.split(':|;',contig)[0]
+            if len(splt) < 7: continue
+
+            contig = re.split(':|;', splt[1])[0]
             percentid = float(splt[3])
-            genelen = int(splt[4])
             matchlen = int(splt[2])
-            if percentid > thresh*100 and float(matchlen)/float(genelen) > thresh:
-                if contig in hit_contigs_set.keys():
-                    hit_contigs_set[contig] += 1
-                else:
-                    hit_contigs_set[contig] = 1
+            genelen = int(splt[4])
 
-def find_phage_gene_matches(infile,outdir,genes_dir,proteins_dir,dbpath,ncbi_bin,numthreads=1,thresh=0.75,clean=True):
-    '''
-    Find the gene matches: Create blastdb for query if not provided, BLAST against
-    each of the gene and protein reference files, and parse the outputs to get the hit contigs
-    Args: infile - the input file to query for gene hits in
-          outdir - the directory to write the output
-          genes_dir, proteins_dir - the directories of the reference sequence files
-          dbpath - blast database of query (None if there isn't one)
-          ncbi_bin - path to blast executables
+            if engine == 'mmseqs' and is_protein:
+                matchlen = matchlen / 3.0
 
-    Outputs: writes file <outdir>/hit_seqs.out
-    Returns: path of outfile
-    '''
-    # create blast databases for the contigs
-    if dbpath is None:
-        print("No blast db provided, creating one")
-        dbpath = create_db(infile, ncbi_bin, outdir)
+            coverage = float(matchlen) / float(genelen)
 
-    # run BLAST searches for the genes in the gene lists
-    genefiles_blast_results = []
-    protfiles_blast_results = []
-
-    if genes_dir is not None:
-        print("Running blast search for gene (nt) sequences in blast db")
-        for fname in os.listdir(genes_dir):
-            gf = os.path.join(genes_dir,fname)
-            gf_blastpath = blast_gene_file(gf, dbpath, ncbi_bin, numthreads, outdir)
-            genefiles_blast_results.append(gf_blastpath)
-
-    # run BLAST searches for the proteins in the protein lists
-    if proteins_dir is not None:
-        print("Running blast search for protein (aa) sequences in blast db")
-        for fname in os.listdir(proteins_dir):
-            pf = os.path.join(proteins_dir,fname)
-            pf_blastpath = blast_protein_file(pf, dbpath, ncbi_bin, numthreads, outdir)
-            protfiles_blast_results.append(pf_blastpath)
-
-    # parse the output files to create set of contig hits
-    hit_contigs_set = dict()
-    for gbr in genefiles_blast_results:
-        get_blast_hits(gbr, hit_contigs_set, thresh)
-    for pbr in protfiles_blast_results:
-        get_blast_hits(pbr, hit_contigs_set, thresh)
-
-    # write out the hit contigs to output file
-    #hit_contigs_list = list(hit_contigs_set)
-    #print("{} contigs hit".format(len(hit_contigs_list)))
-    outputfile = os.path.join(outdir, "hit_seqs.out")
-    #print("Writing list of hit contigs in: " + outputfile)
-    #with open(outputfile,'w+') as o:
-    #    o.write('\n'.join(hit_contigs_list))
-    with open(outputfile, 'w+') as f:
-        for key, value in hit_contigs_set.items():
-            f.write(f"{key}\t{value}\n")
-
-    # remove intermediate files
-    if clean:
-        print("Removing intermediate files...")
-        for f in genefiles_blast_results: os.remove(f)
-        for f in protfiles_blast_results: os.remove(f)
-        if infile:  # we created the blast db
-            for f in glob.glob(dbpath+'*'): os.remove(f)
-    return outputfile
-
-
+            if percentid > thresh * 100 and coverage > thresh:
+                hit_contigs_set[contig] = hit_contigs_set.get(contig, 0) + 1
 
 def main():
     args = parse_user_input()
-    infile = args.fasta
-    outdir = args.output
-    genes_dir = args.genes_dir
-    proteins_dir = args.proteins_dir
-    dbpath = args.blastdb
-    ncbi_bin = args.ncbi_bin
-    numthreads = args.nthreads
-    thresh = args.thresh
-    clean = args.clean
+    
+    if args.engine == 'diamond' and not args.fasta:
+        print("Error: DIAMOND engine requires the original contigs fasta (-f) to act as the query.")
+        sys.exit(1)
+        
+    if not os.path.exists(args.output): os.makedirs(args.output)
+    
+    dbpath = args.dbpath if args.dbpath else create_db(args.fasta, args.engine, args.bin_path, args.output)
+    results_info = []
 
-    find_phage_gene_matches(infile,outdir,genes_dir,proteins_dir,dbpath,ncbi_bin,numthreads,thresh,clean)
+    if args.genes_dir and os.path.exists(args.genes_dir):
+        for fname in os.listdir(args.genes_dir):
+            r_file = search_gene(os.path.join(args.genes_dir, fname), dbpath, args.engine, args.bin_path, args.nthreads, args.output)
+            if r_file: results_info.append((r_file, False))
 
+    if args.proteins_dir and os.path.exists(args.proteins_dir):
+        for fname in os.listdir(args.proteins_dir):
+            r_file = search_protein(os.path.join(args.proteins_dir, fname), dbpath, args.engine, args.bin_path, args.nthreads, args.output)
+            if r_file: results_info.append((r_file, True))
 
-if __name__=='__main__':
+    hit_contigs_set = {}
+    for r_file, is_prot in results_info:
+        get_hits(r_file, hit_contigs_set, args.thresh, is_protein=is_prot, engine=args.engine)
+
+    with open(os.path.join(args.output, "hit_seqs.out"), 'w') as f:
+        for k, v in hit_contigs_set.items(): f.write(f"{k}\t{v}\n")
+
+    if args.clean:
+        for d in glob.glob(os.path.join(args.output, "tmp_*")): shutil.rmtree(d)
+        if args.fasta and args.engine != 'diamond':
+            for f in glob.glob(dbpath + "*"): os.remove(f)
+
+if __name__ == '__main__':
     main()

@@ -1,31 +1,5 @@
 import re
 import argparse
-MIN_STRICT_GENE = 5
-min_len_gene_dict = {2000:1,5000:5,10000:10,20000:20,50000:30,100000:35,200000:40,500000:50}
-#min_len_gene_dict={2000:2,5000:5,10000:8,20000:12,100000:20,200000:35,500000:50}
-
-#def check_gene(length, gene_count, min_len_gene_dict={2000:2,5000:5,10000:8,20000:12,100000:20,200000:35,500000:50}):
-#    """
-#    Check if the gene_count meets the minimum requirement for the given length.
-#
-#    :param length: The length of the sequence.
-#    :param gene_count: The number of genes.
-#    :param min_len_gene_dict: A dictionary mapping minimum length thresholds to required gene counts.
-#    :return: True if gene_count meets or exceeds the required minimum, otherwise False.
-#    """
-#    # Sort the dictionary keys in ascending order
-#    sorted_keys = sorted(min_len_gene_dict.keys())
-#
-#    # Find the highest applicable threshold
-#    required_genes = 0
-#    for key in sorted_keys:
-#        if int(length) >= key:
-#            required_genes = min_len_gene_dict[key]
-#        else:
-#            break
-#
-#    # Check if the gene count is sufficient
-#    return gene_count >= required_genes
 #TODO, need a paramater to control gene desity
 def check_gene(length, gene_count, min_gene_density=1):
     """
@@ -237,6 +211,7 @@ if __name__ == "__main__":
                 len2 = float(get_path_len(sublst))
                 print(total_gene,sublst,gene_len,score_len,both_len,len2,both_len/len2 >= args.threshold/2,(gene_len + score_len + both_len)/len2 >= args.threshold,len2)
                 len2 = float(get_path_len(sublst))
+                #TODO total_gene >= 8 need 
                 if ((float(gene_len)/len2 > 0.95) or float(gene_len + both_len)/len2 > 0.95 or float(both_len)/len2 > 0.95) and len2 >= args.minlen and total_gene >=8:
                     final_keeped.append(sublst)
     with open(args.output, "w") as f:

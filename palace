@@ -197,7 +197,7 @@ while IFS='=' read -r key value; do
 
     # Log important configurations
     case $key in
-        fastq1|fastq2|phagedb|out_dir|prefix|threads|PALACE)
+        fastq1|fastq2|phagedb|out_dir|prefix|threads|MIN_LEN)
             log "INFO" "  $key = $value"
             ;;
     esac
@@ -234,7 +234,8 @@ FASTP=$ENV_PREFIX/bin/fastp
 SPADES=$ENV_PREFIX/bin/spades.py
 NCBI_BIN=$ENV_PREFIX/bin
 RAGTAG=$ENV_PREFIX/bin/ragtag.py
-
+TABIX=$ENV_PREFIX/bin/tabix
+BGZIP=$ENV_PREFIX/bin/bgzip
 # Now we can safely use $PALACE since it's been loaded from config
 SCRIPTS="$ENV_PREFIX/share/palace/scripts"
 MATCHING="$ENV_PREFIX/bin/matching"
@@ -419,7 +420,7 @@ if ! check_skip_step "${OUTPUT_FILES[first_bam]}.bai" "Alignment"; then
         log "INFO" "Creating BAM file..."
         $BWA mem -t "$threads" "${OUTPUT_FILES[assembly_fasta]}" \
              "${OUTPUT_FILES[filter_fastq1]}" "${OUTPUT_FILES[filter_fastq2]}" | \
-        $SAMTOOLS view -F 0x0800 -buS - > "$out_dir/02-assembly/${prefix}_tmp.bam"
+        $SAMTOOLS view -@ $threads -F 0x0800 -buS - > "$out_dir/02-assembly/${prefix}_tmp.bam"
         
         $SAMTOOLS sort -@ "$threads" "$out_dir/02-assembly/${prefix}_tmp.bam" \
                   -O BAM -o "${OUTPUT_FILES[first_bam]}"
@@ -537,15 +538,14 @@ fi
 if ! check_skip_step "${OUTPUT_FILES[first_bam]}.depth.gz" "Depth calculation"; then
     log "INFO" "Calculating coverage depth..."
 
-    $SAMTOOLS depth "${OUTPUT_FILES[first_bam]}" > "${OUTPUT_FILES[first_bam]}.depth"
+    $SAMTOOLS depth -@ $threads "${OUTPUT_FILES[first_bam]}" > "${OUTPUT_FILES[first_bam]}.depth"
     first_depth=$(awk '{sum+=$3} END { print sum/NR }' "${OUTPUT_FILES[first_bam]}.depth")
-    /gpfs1/home/gzpan2/mambaforge/envs/phispy/bin/bgzip -f "${OUTPUT_FILES[first_bam]}.depth"
-    /gpfs1/home/gzpan2/mambaforge/envs/phispy/bin/tabix -f -s 1 -b 2 -e 2 "${OUTPUT_FILES[first_bam]}.depth.gz"
+    $BGZIP -@ $threads -f "${OUTPUT_FILES[first_bam]}.depth"
+    $TABIX -f -s 1 -b 2 -e 2 "${OUTPUT_FILES[first_bam]}.depth.gz"
 
     handle_error $? "Depth calculation failed"
 else
-    #first_depth=$(zcat "${OUTPUT_FILES[first_bam]}.depth.gz" | awk '{sum+=$3} END { print sum/NR }')
-    first_depth=32
+    first_depth=$(zcat "${OUTPUT_FILES[first_bam]}.depth.gz" | awk '{sum+=$3} END { print sum/NR }')
     echo "bam depth is ${first_depth}"
 fi
 
@@ -576,7 +576,7 @@ if ! check_skip_step "$out_dir/04-match/${prefix}_filtered_graph.txt" "Graph fil
             0.7 \
             "${OUTPUT_FILES[assembly_fasta]}.fai" \
             "$out_dir/04-match/all_hit_segs.txt" \
-            "$out_dir/02-assembly/contigs.paths"
+            "$out_dir/02-assembly/contigs.paths" 0.7
 
     uniq "$out_dir/04-match/${prefix}_filtered_graph_pre.txt" > "$out_dir/04-match/${prefix}_filtered_graph.txt"
     handle_error $? "Graph filtering failed"
@@ -587,8 +587,7 @@ log "INFO" "Running path matching algorithm..."
 $MATCHING -g "$out_dir/04-match/${prefix}_filtered_graph.txt" \
           -r "$out_dir/04-match/${prefix}_linear.txt" \
           -c "$out_dir/04-match/${prefix}_cycle.txt" \
-          -v 1 -s -i 10 \
-          -l "$out_dir/02-assembly/contigs.paths"
+          -s -i 10 -l "$out_dir/02-assembly/contigs.paths"
 handle_error $? "Path matching failed"
 
 # Remove duplicates from cycles
@@ -682,16 +681,11 @@ for fullname in "$out_dir/05-furth/second_match"/*.second; do
     if [ "$refname" == "remain" ]; then
         log "INFO" "Processing 'remain' graph (non-reference contigs)..."
 
-        timeout 30m $MATCHING -g "$fullname" \
+        $MATCHING -g "$fullname" \
                             -r "${second}_linear.txt" \
                             -c "${second}_cycle.txt" \
-                            -i 10 -v 1 -b \
+                            -i 10 -b \
                             -l "$out_dir/02-assembly/contigs.paths" --aggressive
-
-        if [ $? -eq 124 ]; then
-            log "WARNING" "Matching timed out for remain graph"
-            continue
-        fi
 
         if [ -s "${second}_cycle.txt" ]; then
             $PYTHON "${PYTHON_SCRIPTS[REMOVE_CYCLE_DUP]}" "${second}_cycle.txt" "${second}_cycle_nodup.txt"
@@ -708,10 +702,12 @@ for fullname in "$out_dir/05-furth/second_match"/*.second; do
         $SAMTOOLS faidx "${second}_unfiltered.fasta"
 
         if [ -f "$out_dir/02-assembly/scaffolds.fasta" ]; then
-            $RAGTAG scaffold -r "$out_dir/02-assembly/scaffolds.fasta" \
-                            "${second}_unfiltered.fasta" \
-                            -o "$out_dir/05-furth/second_match/${refname}_ragtag" \
-                            -d 2000
+            awk '/^>/ {if (seqlen >= 5000) print seq; seq=$0; seqlen=0; next} {seq=seq"\n"$0; seqlen+=length($0)} END {if (seqlen >= 5000) print seq}' \
+            "$out_dir/02-assembly/scaffolds.fasta" > "$out_dir/02-assembly/scaffolds_filtered_5k.fasta"
+            $RAGTAG scaffold -r "$out_dir/02-assembly/scaffolds_filtered_5k.fasta" \
+                "${second}_unfiltered.fasta" \
+                -o "$out_dir/$FURTH_DIR/second_match/${refname}_ragtag" \
+                -d 2000
 
             if [ -s "$out_dir/05-furth/second_match/${refname}_ragtag/ragtag.scaffold.agp" ]; then
                 $PYTHON "${PYTHON_SCRIPTS[FILTER_RAGTAG]}" \
@@ -725,7 +721,7 @@ for fullname in "$out_dir/05-furth/second_match"/*.second; do
                     "$fullname" \
                     "$out_dir/05-furth/second_match/${refname}.rag.txt" \
                     "$out_dir/05-furth/second_match/$refname.result.txt" \
-                    0.6 8000 \
+                    0.6 $MIN_LEN \
                     "${second}_all_result_before_cut.txt" \
                     "${OUTPUT_FILES[hit_out]}"
         else
@@ -737,17 +733,12 @@ for fullname in "$out_dir/05-furth/second_match"/*.second; do
     else
         log "INFO" "Processing with reference: $refname"
 
-        timeout 30m $MATCHING -g "$fullname" \
+        $MATCHING -g "$fullname" \
                             -r "${second}_linear.txt" \
                             -c "${second}_cycle.txt" \
-                            -i 10 -v 1 -b \
+                            -i 10 -b \
                             -l "$out_dir/02-assembly/contigs.paths" \
                             --aggressive
-
-        if [ $? -eq 124 ]; then
-            log "WARNING" "Matching timed out for $refname"
-            continue
-        fi
 
         $PYTHON "${PYTHON_SCRIPTS[REMOVE_CYCLE_DUP]}" \
                 "${second}_cycle.txt" \
@@ -883,8 +874,14 @@ $PYTHON "${PYTHON_SCRIPTS[CORRECTED_DUP]}" \
         "${prefix}_cycle_nodup.txt" \
         "${OUTPUT_FILES[first_bam]}" \
         "$out_dir/final_result/${prefix}_all_before_cut.txt" \
-        10000
+        $MIN_LEN
 
+$PYTHON "${PYTHON_SCRIPTS[MAKE_FINAL_FA]}" \
+        "$out_dir/final_result/${prefix}_final.txt" \
+        ""$out_dir/04-match/${prefix}_filtered_graph.txt"" \
+        "${OUTPUT_FILES[assembly_fasta]}" \
+        "${prefix}_final.fasta" \
+        "$prefix"
 log "SUCCESS" "Step 6: Final Results generated"
 
 #######################################################################################
