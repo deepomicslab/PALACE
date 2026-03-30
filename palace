@@ -381,7 +381,7 @@ else
     $SPADES --meta -o "$out_dir/02-assembly" \
             -1 "${OUTPUT_FILES[filter_fastq1]}" \
             -2 "${OUTPUT_FILES[filter_fastq2]}" \
-            -t "$threads" -m 200 --phred-offset 33 --only-assembler
+            -t "$threads" -m 200
     
     handle_error $? "SPAdes assembly failed"
 fi
