@@ -6,14 +6,14 @@ PALACE is a computational framework based on deep learning models and conjugate 
 ## Installation
 ### Approach 1, install with mamba/conda.(Recommended)
 ```
-conda create -n palace_env
+conda create -n palace_env python=3.8
 conda activate palace_env
-conda install -c bioconda palace
+conda install -c delta2cityu -c bioconda -c conda-forge palace
 or
 #mamba is recommended
-mamba create -n palace_env
+mamba create -n palace_env python=3.8
 mamba activate palace_env
-mamba install -c bioconda palace
+mamba install -c delta2cityu -c bioconda -c conda-forge palace
 ```
 <!-- 1. Clone the repository and enter the directory:
 

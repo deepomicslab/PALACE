@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://github.com/deepomicslab/PALACE/archive/refs/tags/{{ version }}.zip
-  sha256: 0b69b5efa9348602f9376faad58d00887d894ba727c42ff2cea15bf7b696d282
+  sha256: xxxx
 
 build:
   number: 0
