@@ -6,14 +6,14 @@ PALACE is a computational framework based on deep learning models and conjugate 
 ## Installation
 ### Approach 1, install with mamba/conda.(Recommended)
 ```
-conda create -n palace_env python=3.8
+conda create -n palace_env
 conda activate palace_env
-conda install -c delta2cityu -c bioconda -c conda-forge palace
+conda install -c delta2cityu -c conda-forge -c bioconda palace
 or
 #mamba is recommended
-mamba create -n palace_env python=3.8
+mamba create -n palace_env
 mamba activate palace_env
-mamba install -c delta2cityu -c bioconda -c conda-forge palace
+mamba install -c delta2cityu -c conda-forge -c bioconda palace
 ```
 <!-- 1. Clone the repository and enter the directory:
 
@@ -80,12 +80,12 @@ python setup.py build_ext --inplace
 ```
 
 ## Using PALACE
-1. Config the config.txt file, [here](https://github.com/deepomicslab/PALACE/tree/release_branch/config/config.txt) is a demo file.  
+1. Config the config.txt file, [here](https://github.com/deepomicslab/PALACE/tree/release_v1/config/config.txt) is a demo file.  
 * ```fastq1```, Read1 paired fastq file.
 * ```fastq2```, Read2 paired fastq file.
-* ```phagedb```, Phage reference database; the latest phage reference database can be download from [here](https://portland-my.sharepoint.com/:f:/g/personal/gzpan2-c_my_cityu_edu_hk/Emb32qBmId5EmNxhJKNEIscBD6t9gsWdNit9D_Dd9fArUw?e=tuNWbd).
-* ```protein_db```, Phage protein database; the latest phage protein database can be download from [here](https://portland-my.sharepoint.com/:f:/g/personal/gzpan2-c_my_cityu_edu_hk/EpVA0ISAp4FBrclyldwpjEwBBHujF4zG2Gu3Vxa5AZICJw?e=5z2qUe).
-*```gcn_model```, Deeplearning model for phage contigs predict; can be download from [here](https://portland-my.sharepoint.com/:u:/g/personal/gzpan2-c_my_cityu_edu_hk/EcgNImBdl9dBnS8Qza0U930B3ENSDDh5EeAZoSkX95VtHQ?e=E1SK0y)
+* ```phagedb```, Phage reference database; the phage reference database can be download from [here](https://drive.google.com/file/d/1qJmnWcBvLDpr0DCLiePIN5dAuSJLGdGf/view?usp=sharing).
+* ```protein_db```, Phage protein database; the phage protein database can be download from [here](https://drive.google.com/file/d/1AMfErj7qvUisUQrT53nFaD4FNo76dSpU/view?usp=sharing).
+*```gcn_model```, Deeplearning model for phage contigs predict; can be download from [here](https://drive.google.com/file/d/1MXBSTw5lIzacmGzqAPxr_HdXoplCoce4/view?usp=sharing)
 * ```threads```, Threads to be used.
 * ```out_dir```, Output directory.
 * ```prefix```, Intermediate file prefix, can be sample name.

@@ -1,5 +1,5 @@
 # Build with: conda build -c conda-forge -c bioconda -c pytorch .
-{% set version = "1.0" %}
+{% set version = "v1.0" %}
 
 package:
   name: palace
@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://github.com/deepomicslab/PALACE/archive/refs/tags/{{ version }}.zip
-  sha256: xxxx
+  sha256: d1372c9496ff6d01175509579e0d0703f836ebae7da5f04f89f53f960990957e
 
 build:
   number: 0
