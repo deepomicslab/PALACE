@@ -85,7 +85,7 @@ python setup.py build_ext --inplace
 * ```fastq2```, Read2 paired fastq file.
 * ```phagedb```, Phage reference database; the phage reference database can be download from [google driver](https://drive.google.com/drive/folders/1uhwATH_kv6wLAol42aXwnQp51rn3pdG0?usp=sharinghttps://drive.google.com/drive/folders/1uhwATH_kv6wLAol42aXwnQp51rn3pdG0?usp=sharing).
 * ```protein_db```, Phage protein database; the phage protein database can be download from [here](https://drive.google.com/file/d/1MXBSTw5lIzacmGzqAPxr_HdXoplCoce4/view?usp=sharing)
-* ```gcn_model```, Deeplearning model for phage contigs predict; can be download from [here](https://drive.google.com/file/d/1AMfErj7qvUisUQrT53nFaD4FNo76dSpU/view?usp=sharing)
+* ```gcn_model```, Deep Learning model for phage contigs predict; can be download from [here](https://drive.google.com/file/d/1AMfErj7qvUisUQrT53nFaD4FNo76dSpU/view?usp=sharing)
 * ```threads```, Threads to be used.
 * ```out_dir```, Output directory.
 * ```prefix```, Intermediate file prefix, can be sample name.
@@ -99,7 +99,7 @@ python setup.py build_ext --inplace
 * ```03-search/```, This directory contains three main intermediate files: ```hit_seqs.out``` contains contigs with phage protein. ```node_scores.out```, the second column is the score predicted by deeplearning network. ```{prefix}_ref_names.txt```, contains phage references identified by kmer alignment. 
 * ```04-match/```, This directory contains the graph structure of the conjugate graph(```{prefix}_filtered_graph.txt```), the results of the graph decompose(```{prefix}_all_result.txt```).
 * ```05-furth```, This directory contains the local matching result based on the phage reference.
-* ```final_result```, This directory contains the final result, final contig paths for phages(```{prefix}_final.txt```), cycle paths for phages(```{prefix}_cycle.txt```), phages fasta(```{prefix}_final.fasta)
+* ```final_result```, This directory contains the final result, final contig paths for phages(```{prefix}_final.txt```) and phages fasta(```{prefix}_final.fasta)
 
 ## Author
 PALACE is developed by DeepOmics lab under the supervision of Dr. Li Shuaicheng, City University of Hong Kong, Hong Kong, China. Should you have any queries, please feel free to contact us by gzpan2-c@my.cityu.edu.hk or ruohawang2-c@my.cityu.edu.hk.
