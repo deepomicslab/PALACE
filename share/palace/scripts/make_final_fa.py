@@ -135,10 +135,6 @@ def make_fa_from_paths(fain, cycle_paths, linear_paths, faout, prefix):
         write_paths(linear_paths, "linear")
 
 def process_sample(path_file, graph_file, edge_fasta, out_fasta, prefix, trim_threshold, min_cycle_length):
-    print(f"Checking path file: {path_file}", file=sys.stderr)
-    print(f"Using graph file: {graph_file}", file=sys.stderr)
-    print(f"Using edge fasta: {edge_fasta}", file=sys.stderr)
-    print(f"Thresholds -> Max Trim: <= {trim_threshold} bp | Min Cycle Length: >= {min_cycle_length} bp", file=sys.stderr)
 
     if not os.path.exists(path_file):
         print(f"Error: Path file not found - {path_file}", file=sys.stderr)
@@ -188,8 +184,8 @@ def main():
     
     parser.add_argument("--trim_threshold", type=int, default=300, 
                         help="Maximum length of contigs that can be trimmed from ends (default: 300)")
-    parser.add_argument("--min_cycle_length", type=int, default=8000, 
-                        help="Minimum physical length of the circular path (default: 8000)")
+    parser.add_argument("--min_cycle_length", type=int, default=10000, 
+                        help="Minimum physical length of the path (default: 8000)")
 
     args = parser.parse_args()
 

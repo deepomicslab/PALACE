@@ -878,7 +878,7 @@ $PYTHON "${PYTHON_SCRIPTS[MAKE_FINAL_FA]}" \
         "$out_dir/final_result/${prefix}_final.txt" \
         ""$out_dir/04-match/${prefix}_filtered_graph.txt"" \
         "${OUTPUT_FILES[assembly_fasta]}" \
-        "${prefix}_final.fasta" \
+        "$out_dir/final_result/${prefix}_final.fasta" \
         "$prefix"
 log "SUCCESS" "Step 6: Final Results generated"
 
