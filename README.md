@@ -80,7 +80,7 @@ python setup.py build_ext --inplace
 ```
 
 ## Using PALACE
-1. Config the config.txt file, [here](https://github.com/deepomicslab/PALACE/tree/release_v1/config/config.txt) is a demo file.  
+1. Config the config.txt file, [here](https://github.com/deepomicslab/PALACE/blob/main/config/config.txt) is a demo file.  
 * ```fastq1```, Read1 paired fastq file.
 * ```fastq2```, Read2 paired fastq file.
 * ```phagedb```, Phage reference database; the phage reference database can be download from [google driver](https://drive.google.com/drive/folders/1uhwATH_kv6wLAol42aXwnQp51rn3pdG0?usp=sharinghttps://drive.google.com/drive/folders/1uhwATH_kv6wLAol42aXwnQp51rn3pdG0?usp=sharing).
