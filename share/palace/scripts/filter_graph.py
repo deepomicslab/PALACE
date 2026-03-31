@@ -151,22 +151,15 @@ def filter_paths(support_segs):
     return full_name_results
 
 def should_include_segment(seg_name):
-    """
-    严格判定是否为核心种子 (0跳)。
-    【重要修复】：移除了这里的拓扑状态判断，防止污染核心种子的定义。
-    """
-    # 【修改】使用传入的 score_threshold 参数替代硬编码的 0.7
     return (seg_name in blast_segs or
             seg_name in gene_res or
             float(scores.get(seg_name, '0')) > score_threshold)
 
 def update_hit_segs(seg_name):
-    """记录直接命中的核心种子标记"""
     hit_info = []
     if seg_name in blast_segs:
         hit_info.append("ref+")
         
-    # 【修改】使用传入的 score_threshold 参数替代硬编码的 0.7
     if float(scores.get(seg_name, '0')) > score_threshold:
         hit_info.append("score+")
         
@@ -178,26 +171,19 @@ def update_hit_segs(seg_name):
         relevate_blast_segs.add(seg_name)
 
 def process_segment(seg_name, line):
-    """为输出格式化 SEG 行，并剔除原图文件自带的科学计数法"""
     fields = line.strip().split()
 
-    # 前两列是 'SEG' 和 节点名称(带E)，必须原样保留保护起来
     cleaned_fields = [fields[0], fields[1]]
 
-    # 从第三列开始，针对数值部分清洗科学计数法
     for field in fields[2:]:
         if 'e' in field.lower():
             try:
                 val = float(field)
-                # 比如 3.07768e+06 会变成 3077680.0
-                # 如果转成浮点后是个整数，就干脆转成 int 格式去掉 .0
                 if val.is_integer():
                     cleaned_fields.append(str(int(val)))
                 else:
-                    # 如果有小数，最多保留6位，并去掉末尾多余的0
                     cleaned_fields.append(f"{val:.3f}".rstrip('0').rstrip('.'))
             except ValueError:
-                # 万一解析失败（非纯数字），原样保留
                 cleaned_fields.append(field)
         else:
             cleaned_fields.append(field)
@@ -212,10 +198,7 @@ def process_segment(seg_name, line):
 
 
 # ==========================================
-# 4. 主干处理逻辑
-# ==========================================
 def main():
-    # 1. 读入并解析所有前置信息
     parse_fasta_index()
     parse_blast_results()
     parse_gene_and_score_files()
@@ -224,7 +207,6 @@ def main():
     with open(original_graph_file, 'r') as f:
         lines = f.readlines()
 
-    # 2. 扫描图文件，提取基础信息并圈定核心种子 (0-Hop)
     for line in lines:
         fields = line.rstrip().split(" ")
         if fields[0] == "SEG":
@@ -235,11 +217,9 @@ def main():
             if should_include_segment(seg_name):
                 write_segs.add(process_segment(seg_name, line))
 
-    # 【修复核心区】：严格控制跳数，杜绝链式反应
-    core_seeds = set(relevate_blast_segs) # 锁定 0-hop 种子
-    hop1_segs = set()                     # 暂存 1-hop 邻居
+    core_seeds = set(relevate_blast_segs) 
+    hop1_segs = set()                     
 
-    # 3. 第一跳扩增 (1-Hop)：仅以 core_seeds 为原点去捞连接边和邻居
     for line in lines:
         fields = line.rstrip().split(" ")
         if fields[0] != "SEG":
@@ -249,14 +229,11 @@ def main():
                 write_juncs.append(line)
                 write_segs.add(process_segment(left_seg, all_segs[left_seg]))
                 write_segs.add(process_segment(right_seg, all_segs[right_seg]))
-                # 放入暂存区，不在本循环内感染 core_seeds
                 hop1_segs.add(left_seg)
                 hop1_segs.add(right_seg)
 
-    # 将 0-hop 和 1-hop 合并，作为第二跳的起点
     relevate_blast_segs.update(hop1_segs)
 
-    # 4. 第二跳扩增 (2-Hop)：以 relevate_blast_segs 为原点再捞一次
     for line in lines:
         fields = line.rstrip().split(" ")
         if fields[0] != "SEG":
@@ -267,32 +244,25 @@ def main():
                 write_segs.add(process_segment(left_seg, all_segs[left_seg]))
                 write_segs.add(process_segment(right_seg, all_segs[right_seg]))
 
-    # 5. 基于线性路径逻辑 (Paths) 进行兜底捞回
     support_segs = blast_segs | set(gene_res.keys()) | score_segs
     path_segs = filter_paths(support_segs)
     written_segs = {item.split(" ")[1] for item in write_segs}
 
     # ==========================================
-    # 5. 写出结果文件
-    # ==========================================
     with open(output_file, 'w') as out:
-        # 写出所有通过种子和跳数捞回的 SEG
         for seg_line in write_segs:
             out.write(seg_line)
 
-        # 写出因为路径兜底捞回，但前面没被抓进去的 SEG (补上默认分值)
         for seg in path_segs:
             if seg not in written_segs:
                 out.write(f"{all_segs[seg].strip()} 0 1.0 0\n")
 
-        # 去重并写出 Junctions 连边信息
         seen_juncs = set()
         for junc in write_juncs:
             if junc not in seen_juncs:
                 out.write(junc)
                 seen_juncs.add(junc)
 
-    # 写出命中的特征标签记录
     with open(hit_segs_file, 'w') as out:
         for seg_name, hit_info in hit_segs.items():
             if hit_info:
