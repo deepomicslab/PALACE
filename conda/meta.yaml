@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://github.com/deepomicslab/PALACE/archive/refs/tags/{{ version }}.zip
-  sha256: 902ba02e3c841534c09c9ea6df07befb38066bf20159a74be2c9a730ac86c042
+  sha256: 7be895591ee0c2294f236259ce6d8ba3f3a27da9ea425efde8413c204f8dddfc
 
 build:
   number: 0
@@ -30,7 +30,7 @@ requirements:
     - htslib
 
   run:
-    - python >=3.9,<3.12
+    - python >=3.8,<3.12
     - samtools
     - numpy
     - pandas
@@ -48,7 +48,7 @@ requirements:
     - pyfaidx
     - cython
     - biopython
-    - pytorch >=1.13.1
+    - pytorch ==1.13.1
     - torch-geometric >=2.0
 
 test:
