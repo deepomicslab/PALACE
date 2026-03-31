@@ -453,7 +453,7 @@ if ! check_skip_step "${OUTPUT_FILES[hit_out]}" "Protein search"; then
             -n "$threads" \
             -o "$out_dir/03-search" \
             -p "$protein_db" \
-            --ncbi_bin "$NCBI_BIN"
+            --bin_path "$NCBI_BIN"
 
     handle_error $? "Protein search failed"
 fi
@@ -702,9 +702,7 @@ for fullname in "$out_dir/05-furth/second_match"/*.second; do
         $SAMTOOLS faidx "${second}_unfiltered.fasta"
 
         if [ -f "$out_dir/02-assembly/scaffolds.fasta" ]; then
-            awk '/^>/ {if (seqlen >= 5000) print seq; seq=$0; seqlen=0; next} {seq=seq"\n"$0; seqlen+=length($0)} END {if (seqlen >= 5000) print seq}' \
-            "$out_dir/02-assembly/scaffolds.fasta" > "$out_dir/02-assembly/scaffolds_filtered_5k.fasta"
-            $RAGTAG scaffold -r "$out_dir/02-assembly/scaffolds_filtered_5k.fasta" \
+            $RAGTAG scaffold -r "$out_dir/02-assembly/scaffolds.fasta" \
                 "${second}_unfiltered.fasta" \
                 -o "$out_dir/$FURTH_DIR/second_match/${refname}_ragtag" \
                 -d 2000

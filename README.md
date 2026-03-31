@@ -1,5 +1,5 @@
 # PALACE
-PALACE is a computational framework based on deep learning models and conjugate graph theory to assemble high-quality and confident phage genomes from metagenomic sequencing data. PALACE currently supports normal pair-end reads, Oxford Nanopore(ONT) and PacBio SMRT(PB) reads. The assembled phages genomes analyzed in the manuscript are available at [Google Drive](https://drive.google.com/drive/folders/1IN_HbWpjdS4Dhjpir5h_5EY52TDFSrpR?usp=sharing).
+PALACE is a computational framework based on deep learning models and conjugate graph theory to assemble high-quality and confident phage genomes from metagenomic sequencing data. PALACE currently supports normal pair-end reads, Oxford Nanopore(ONT) and PacBio SMRT(PB) reads. The assembled phages genomes analyzed in the manuscript are available at [zenodo](https://doi.org/10.5281/zenodo.19324783).
  
 ![image](https://github.com/deepomicslab/PALACE/blob/main/pipeline.png)
  
@@ -83,7 +83,7 @@ python setup.py build_ext --inplace
 1. Config the config.txt file, [here](https://github.com/deepomicslab/PALACE/tree/release_v1/config/config.txt) is a demo file.  
 * ```fastq1```, Read1 paired fastq file.
 * ```fastq2```, Read2 paired fastq file.
-* ```phagedb```, Phage reference database; the phage reference database can be download from [here](https://drive.google.com/file/d/1qJmnWcBvLDpr0DCLiePIN5dAuSJLGdGf/view?usp=sharing).
+* ```phagedb```, Phage reference database; the phage reference database can be download from [manuscript version](https://drive.google.com/file/d/1GKCShaTKgHc_ApU-GUkBCaFbsZSBm6Hm/view?usp=sharing)([extended version](https://drive.google.com/file/d/1qekTZArUIL7eT9ckL8NBuqu3mhEiRR7v/view?usp=sharing)).
 * ```protein_db```, Phage protein database; the phage protein database can be download from [here](https://drive.google.com/file/d/1AMfErj7qvUisUQrT53nFaD4FNo76dSpU/view?usp=sharing).
 *```gcn_model```, Deeplearning model for phage contigs predict; can be download from [here](https://drive.google.com/file/d/1MXBSTw5lIzacmGzqAPxr_HdXoplCoce4/view?usp=sharing)
 * ```threads```, Threads to be used.
