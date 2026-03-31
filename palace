@@ -704,7 +704,7 @@ for fullname in "$out_dir/05-furth/second_match"/*.second; do
         if [ -f "$out_dir/02-assembly/scaffolds.fasta" ]; then
             $RAGTAG scaffold -r "$out_dir/02-assembly/scaffolds.fasta" \
                 "${second}_unfiltered.fasta" \
-                -o "$out_dir/$FURTH_DIR/second_match/${refname}_ragtag" \
+                -o "$out_dir/05-furth/second_match/${refname}_ragtag" \
                 -d 2000
 
             if [ -s "$out_dir/05-furth/second_match/${refname}_ragtag/ragtag.scaffold.agp" ]; then
