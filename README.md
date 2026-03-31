@@ -1,5 +1,5 @@
 # PALACE
-PALACE is a computational framework based on deep learning models and conjugate graph theory to assemble high-quality and confident phage genomes from metagenomic sequencing data. PALACE currently supports normal pair-end reads, Oxford Nanopore(ONT) and PacBio SMRT(PB) reads. The assembled phages genomes analyzed in the manuscript are available at [zenodo](https://doi.org/10.5281/zenodo.19324783).
+PALACE is a computational framework based on deep learning models and conjugate graph theory to assemble high-quality and confident phage genomes from metagenomic sequencing data. PALACE currently supports normal pair-end reads. The assembled phages genomes analyzed in the manuscript are available at [zenodo](https://doi.org/10.5281/zenodo.19324783).
  
 ![image](https://github.com/deepomicslab/PALACE/blob/main/pipeline.png)
  
