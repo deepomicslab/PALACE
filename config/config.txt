@@ -3,8 +3,9 @@
 fastq1=/demo/out_1.fastq.gz
 fastq2=/demo/out_2.fastq.gz
 ##can be found at https://github.com/deepomicslab/PALACE.git
-phagedb=/home/ruohawang2/12.Phage_assem/pipeline/genome_db/checkv_reps.fna
-protein_db=/home/ruohawang2/12.Phage_assem/phage_protein_anno/SCAPP/scapp/protein_db
+phagedb=phage_refs.default.rmdup.fasta
+##Please put the protein fasta file into the protein_db directory. You can put multiple protein fasta files in the directory. MAKE SURE THIS FOLDER CONTAINS ONLY PROTEIN FASTA FILES.
+protein_db=protein_db
 gcn_model=/scratch/project/cs_shuaicli/pgz/phage/PALACE_sim/GCN_model_retrained.pt
 
 #output
