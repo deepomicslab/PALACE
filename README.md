@@ -84,12 +84,12 @@ python setup.py build_ext --inplace
 * ```fastq1```, Read1 paired fastq file.
 * ```fastq2```, Read2 paired fastq file.
 * ```phagedb```, Phage reference database; the phage reference database can be download from [google driver](https://drive.google.com/drive/folders/1uhwATH_kv6wLAol42aXwnQp51rn3pdG0?usp=sharinghttps://drive.google.com/drive/folders/1uhwATH_kv6wLAol42aXwnQp51rn3pdG0?usp=sharing).
-* ```protein_db```, Phage protein database; the phage protein database can be download from [here](https://drive.google.com/file/d/1MXBSTw5lIzacmGzqAPxr_HdXoplCoce4/view?usp=sharing)
-* ```gcn_model```, Deep Learning model for phage contigs predict; can be download from [here](https://drive.google.com/file/d/1AMfErj7qvUisUQrT53nFaD4FNo76dSpU/view?usp=sharing)
+* ```protein_db```, Phage protein database dir; the phage protein database file can be download from [google driver](https://drive.google.com/file/d/1MXBSTw5lIzacmGzqAPxr_HdXoplCoce4/view?usp=sharing)
+* ```gcn_model```, Deep Learning model for phage contigs predict; can be download from [google driver](https://drive.google.com/file/d/1AMfErj7qvUisUQrT53nFaD4FNo76dSpU/view?usp=sharing)
 * ```threads```, Threads to be used.
 * ```out_dir```, Output directory.
 * ```prefix```, Intermediate file prefix, can be sample name.
-* ```ENV_PREFIX```, Conda ENV path. please keep empty if conda ENV is activated.
+* ```ENV_PREFIX```, Conda ENV path. can keep empty if conda ENV is activated.
 2. Runing PALACE.  
 * ``` palace --config config.txt```
 
