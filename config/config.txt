@@ -5,7 +5,7 @@ fastq2=/path/to/out_2.fastq.gz
 ##can be found at https://github.com/deepomicslab/PALACE.git
 phagedb=/path/to/phage_refs_extended.rmdup.fasta
 ##Please put the protein fasta file into the protein_db directory. You can put multiple protein fasta files in the directory. MAKE SURE THIS FOLDER CONTAINS ONLY PROTEIN FASTA FILES.
-protein_db=/path/to/protein_db
+protein_db=/path/to/protein_db_dir
 gcn_model=/path/to/GCN_model_retrained.pt
 
 #output
